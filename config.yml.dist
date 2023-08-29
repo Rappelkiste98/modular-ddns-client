@@ -1,0 +1,49 @@
+Detector:
+  # Available default Detectors: "avm", "api", !!-> "generic" <- TEST ONLY, NOT STABLE!!
+  Name: "avm"
+  # URL from the local Entrypoint Router (Only important for the Detector "avm"!) (Optional)
+  URL:  "fritz.box"
+  # IPv6 Local (GlobalUnicast) Network Prefix-Length (Optional)
+  IPv6PrefixLength: 56
+  # Activate IPv4 Updating [True / False]
+  IPv4: True
+  # Activate IPv6 Updating [True / False]
+  IPv6: True
+
+Modules:
+  - Name: "ddnss-1"
+    Service: "DynDNS"
+    UpdateUrl: "https://ddnss.de/upd.php"
+    UpdateKey: "UPDATE_KEY"
+  - Name: "ipv64-1"
+    Service: "IPv64"
+#    UpdateUrl: "https://ipv64.net/nic/update"
+    UpdateKey: "UPDATE_KEY"
+#    ApiUrl: "https://ipv64.net/api"
+    ApiKey: "KEY"
+    NetworkPrefix: True
+  - Name: "netcup-1"
+    Service: "Netcup"
+    Username: "USERNAME" # CustomerNr
+    Password: "PASSWORD" # ApiPassword
+    ApiKey: "KEY"
+#    ApiUrl: "https://ccp.netcup.net/run/webservice/servers/endpoint.php?JSON"
+
+Domains:
+  - Domain: "test.ddnss.de"
+    Module: "ddnss-1"
+    Subdomains:
+      - Subdomain: "@"
+        IPv4: "200.60.230.40"
+        IPv6: "::7335:fef4:f905:31ae"
+
+  - Domain: "test.home64.de"
+    Module: "ipv64-1"
+    Subdomains:
+      - Subdomain: "@"
+        IPv6: "::7335:fef4:f905:31ae"
+
+  - Domain: "netcup.eu"
+    Module: "netcup-1"
+    Subdomains:
+      - Subdomain: "test"

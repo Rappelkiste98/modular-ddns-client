@@ -1,0 +1,13 @@
+{
+  "require": {
+    "ext-curl": "*",
+    "ext-soap": "*",
+    "dallgoot/yaml": "0.9.1.1"
+  },
+  "autoload": {
+    "psr-4": {
+      "Acme\\": "src/",
+      "Modules\\": "modules/"
+    }
+  }
+}
