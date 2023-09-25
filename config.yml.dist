@@ -1,3 +1,13 @@
+General:
+  # Available Logger Levels: "Request", "Debug", "Info", "Change", "Success", "Warning", "Error"
+  LoggerLevel: 'Request'
+  # Activate File Logs (File "var/logs/") [True / False]
+  FileLogger: True
+  # Available FileLogger Levels: "Request", "Debug", "Info", "Change", "Success", "Warning", "Error"
+  FileLoggerLevel: 'Change'
+  # Activate Caching [True / False]
+  Cache: True
+
 Detector:
   # Available default Detectors: "avm", "api", !!-> "generic" <- TEST ONLY, NOT STABLE!!
   Name: "avm"
@@ -14,36 +24,41 @@ Modules:
   - Name: "ddnss-1"
     Service: "DynDNS"
     UpdateUrl: "https://ddnss.de/upd.php"
-    UpdateKey: "UPDATE_KEY"
+    UpdateKey: "UPDATEKEY"
   - Name: "ipv64-1"
     Service: "IPv64"
-#    UpdateUrl: "https://ipv64.net/nic/update"
-    UpdateKey: "UPDATE_KEY"
-#    ApiUrl: "https://ipv64.net/api"
-    ApiKey: "KEY"
+    # Custom UpdateUrl
+    #UpdateUrl: "https://ipv64.net/nic/update"
+    UpdateKey: "UPDATEKEY"
+    # Custom ApiUrl
+    #ApiUrl: "https://ipv64.net/api"
+    ApiKey: "APIKEY"
     NetworkPrefix: True
   - Name: "netcup-1"
     Service: "Netcup"
-    Username: "USERNAME" # CustomerNr
-    Password: "PASSWORD" # ApiPassword
-    ApiKey: "KEY"
-#    ApiUrl: "https://ccp.netcup.net/run/webservice/servers/endpoint.php?JSON"
+    # CustomerNr
+    Username: "CUSTOMERNR"
+    # ApiPassword
+    Password: "APIPASSWORT"
+    ApiKey: "APIKEY"
+    # Custom ApiUrl
+    #ApiUrl: "https://ccp.netcup.net/run/webservice/servers/endpoint.php?JSON"
 
 Domains:
-  - Domain: "test.ddnss.de"
+  - Domain: "quengel.ddnss.de"
     Module: "ddnss-1"
     Subdomains:
       - Subdomain: "@"
-        IPv4: "200.60.230.40"
+        IPv4: "202.61.230.47"
         IPv6: "::7335:fef4:f905:31ae"
 
-  - Domain: "test.home64.de"
+  - Domain: "quengel.home64.de"
     Module: "ipv64-1"
     Subdomains:
       - Subdomain: "@"
-        IPv6: "::7335:fef4:f905:31ae"
+        IPv6: "::7335:fef4:f905:30ae"
 
-  - Domain: "netcup.eu"
+  - Domain: "quenter.eu"
     Module: "netcup-1"
     Subdomains:
       - Subdomain: "test"

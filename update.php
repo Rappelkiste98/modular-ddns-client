@@ -20,12 +20,8 @@ require __DIR__ . '/vendor/autoload.php';
 try {
     $config = Yaml::parseFile(__DIR__ . '/config.yml', Loader::IGNORE_COMMENTS);
     define('LOGGER', new Logger(LoggerLevel::fromName($config->General->LoggerLevel)));
-    if ($config->General->FileLogger) {
-        define('FILE_LOGGER', new FileLogger(LoggerLevel::fromName($config->General->FileLoggerLevel)));
-    }
-    if ($config->General->Cache) {
-        define('CACHE', new Cache());
-    }
+    define('FILE_LOGGER', $config->General->FileLogger ? new FileLogger(LoggerLevel::fromName($config->General->FileLoggerLevel)) : null);
+    define('CACHE', $config->General->Cache ? new Cache() : null);
 
     define('USE_IPv4', $config->Detector->IPv4 ?? false);
     define('USE_IPv6', $config->Detector->IPv6 ?? false);
