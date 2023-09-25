@@ -11,8 +11,6 @@ use Modules\DnsService\NetcupService;
 
 class DnsServiceBuilder
 {
-    /** @var DomainZone[] $dnsZones */
-    private array $dnsZones= [];
     private ?string $updateUrl = null;
     private ?string $updateKey = null;
     private ?string $apiUrl = null;

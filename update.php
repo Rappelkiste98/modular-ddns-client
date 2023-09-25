@@ -160,6 +160,6 @@ try {
     LOGGER->success('DynDNS Client successfully');
 } catch (SoapFault | ConfigException $e) {
     LOGGER->error($e::class . ' -> ' . $e->getMessage());
-} catch (FileException $e) {
+} catch (\Exception $e) {
     LOGGER->error($e->getMessage());
 }
