@@ -5,6 +5,7 @@ use Src\ConfigLoader;
 use Src\Entities\DnsRecord;
 use Src\Exception\BuildIPv6AddressException;
 use Src\Exception\ConfigException;
+use Src\Exception\FileException;
 use Src\Logger;
 use Src\LoggerLevel;
 use Src\Network\DnsType;
