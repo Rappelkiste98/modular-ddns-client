@@ -1,11 +1,11 @@
 <?php
 
-namespace Acme\Entities;
+namespace Src\Entities;
 
-use Acme\Network\DnsType;
-use Acme\Network\Domain;
-use Acme\Network\IPv4;
-use Acme\Network\IPv6;
+use Src\Network\DnsType;
+use Src\Network\Domain;
+use Src\Network\IPv4;
+use Src\Network\IPv6;
 
 class DnsRecord extends BaseEntity
 {

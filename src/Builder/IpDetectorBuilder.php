@@ -1,8 +1,8 @@
 <?php
 
-namespace Acme\Builder;
+namespace Src\Builder;
 
-use Acme\Exception\ConfigException;
+use Src\Exception\ConfigException;
 use Modules\IpDetector\ApiDetector;
 use Modules\IpDetector\AvmDetector;
 use Modules\IpDetector\GenericDetector;

@@ -1,8 +1,8 @@
 <?php
 
-namespace Acme\Entities;
+namespace Src\Entities;
 
-use Acme\Network\Domain;
+use Src\Network\Domain;
 
 class DomainZone extends BaseEntity
 {

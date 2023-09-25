@@ -2,14 +2,14 @@
 
 namespace Modules\IpDetector;
 
-use Acme\Curl\HttpClient;
-use Acme\Exception\BuildIPv6AddressException;
-use Acme\Exception\HttpClientException;
-use Acme\Exception\IpNotFoundException;
-use Acme\Log;
-use Acme\Network\IPv4;
-use Acme\Network\IPv6;
-use Acme\Network\IPv6Type;
+use Src\Curl\HttpClient;
+use Src\Exception\BuildIPv6AddressException;
+use Src\Exception\HttpClientException;
+use Src\Exception\IpNotFoundException;
+use Src\Logger;
+use Src\Network\IPv4;
+use Src\Network\IPv6;
+use Src\Network\IPv6Type;
 
 class ApiDetector extends IpDetector
 {
@@ -38,7 +38,7 @@ class ApiDetector extends IpDetector
                             return $ipv6Builder->setNetworkPrefixLength($this->configPrefixLength)
                                 ->buildByAddressAndPrefix();
                         } catch (BuildIPv6AddressException $e) {
-                            Log::error('Error while building IPv6 with Address & Network Prefix-Length! Continue without Network-Prefix', $this::class);
+                            LOGGER->error('Error while building IPv6 with Address & Network Prefix-Length! Continue without Network-Prefix', $this::class);
                         }
                     }
 
@@ -49,7 +49,7 @@ class ApiDetector extends IpDetector
                         ->build();
                 }
             } catch (HttpClientException $e) {
-                Log::error('Error while fetching External IP Address', $this::class);
+                LOGGER->error('Error while fetching External IP Address', $this::class);
             }
         }
 

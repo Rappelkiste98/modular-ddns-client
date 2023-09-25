@@ -1,10 +1,10 @@
 <?php
 
-namespace Acme\Builder;
+namespace Src\Builder;
 
-use Acme\Exception\BuildIPv6AddressException;
-use Acme\Network\IPv6;
-use Acme\Network\IPv6Type;
+use Src\Exception\BuildIPv6AddressException;
+use Src\Network\IPv6;
+use Src\Network\IPv6Type;
 
 class IPv6Builder
 {

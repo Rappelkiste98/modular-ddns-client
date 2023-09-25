@@ -1,6 +1,6 @@
 <?php
 
-namespace Acme\Exception;
+namespace Src\Exception;
 
 class ConfigException extends \Exception
 {

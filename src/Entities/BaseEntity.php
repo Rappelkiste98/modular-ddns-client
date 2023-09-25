@@ -1,6 +1,6 @@
 <?php
 
-namespace Acme\Entities;
+namespace Src\Entities;
 
 class BaseEntity
 {

@@ -2,11 +2,11 @@
 
 namespace Modules\DnsService;
 
-use Acme\Entities\DnsRecord;
-use Acme\Entities\DomainZone;
-use Acme\Exception\DnsServiceException;
-use Acme\Network\DnsType;
-use Acme\Network\Domain;
+use Src\Entities\DnsRecord;
+use Src\Entities\DomainZone;
+use Src\Exception\DnsServiceException;
+use Src\Network\DnsType;
+use Src\Network\Domain;
 
 
 abstract class DnsService
@@ -40,7 +40,10 @@ abstract class DnsService
     {
         foreach ($this->domainZones as $zone) {
             foreach ($zone->getRecords() as $zoneRecord) {
-                if ($zoneRecord->getDnsRecordname() === $record->getDnsRecordname() && $zoneRecord->getType() === $record->getType()) {
+                if ($zoneRecord->getDnsRecordname() === $record->getDnsRecordname()
+                    && $zoneRecord->getType() === $record->getType()
+                    && $zoneRecord->getIp()::class === $record->getIp()::class
+                ) {
                     return $zoneRecord;
                 }
             }

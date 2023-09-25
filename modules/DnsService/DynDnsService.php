@@ -2,14 +2,14 @@
 
 namespace Modules\DnsService;
 
-use Acme\Curl\HttpClient;
-use Acme\Entities\DnsRecord;
-use Acme\Entities\DomainZone;
-use Acme\Exception\DnsServiceException;
-use Acme\Log;
-use Acme\Network\Domain;
-use Acme\Network\IPv4;
-use Acme\Network\IPv6;
+use Src\Curl\HttpClient;
+use Src\Entities\DnsRecord;
+use Src\Entities\DomainZone;
+use Src\Exception\DnsServiceException;
+use Src\Logger;
+use Src\Network\Domain;
+use Src\Network\IPv4;
+use Src\Network\IPv6;
 
 class DynDnsService extends DnsService
 {
@@ -94,11 +94,16 @@ class DynDnsService extends DnsService
             if (!str_contains($response, 'Updated 1 hostname')) {
                 throw new DnsServiceException('Set Record Request not succesfully', $response);
             }
+
             $recordIpv4?->setUpdate(false);
             $recordIpv6?->setUpdate(false);
-            Log::success('Record Update "' . $baseRecord->getDnsRecordname() . '" successfully pushed!', $this::class);
+
+            $recordIpv4 === null ? : CACHE?->cacheDnsRecord($recordIpv4);
+            $recordIpv6 === null ? : CACHE?->cacheDnsRecord($recordIpv6);
+
+            LOGGER->success('Record Update "' . $baseRecord->getDnsRecordname() . '" successfully pushed!', $this::class);
         } catch (\Exception $e) {
-            Log::error($e->getMessage(), $this::class);
+            LOGGER->error($e->getMessage(), $this::class);
         }
     }
 }

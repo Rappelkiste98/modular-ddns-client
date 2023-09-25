@@ -1,17 +1,17 @@
 <?php
 
-namespace Acme;
+namespace Src;
 
-use Acme\Builder\DnsServiceBuilder;
-use Acme\Builder\IpDetectorBuilder;
-use Acme\Builder\IPv4Builder;
-use Acme\Builder\IPv6Builder;
-use Acme\Entities\DnsRecord;
-use Acme\Entities\DomainZone;
-use Acme\Exception\ConfigException;
-use Acme\Exception\RecordNotFoundException;
-use Acme\Network\Domain;
-use Acme\Network\DomainConfig;
+use Src\Builder\DnsServiceBuilder;
+use Src\Builder\IpDetectorBuilder;
+use Src\Builder\IPv4Builder;
+use Src\Builder\IPv6Builder;
+use Src\Entities\DnsRecord;
+use Src\Entities\DomainZone;
+use Src\Exception\ConfigException;
+use Src\Exception\RecordNotFoundException;
+use Src\Network\Domain;
+use Src\Network\DomainConfig;
 use Modules\DnsService\DnsService;
 use Modules\IpDetector\IpDetector;
 use SoapFault;
@@ -29,7 +29,7 @@ class ConfigLoader
             ->setConfigPrefix($configPrefixLength)
             ->build($detector);
 
-        Log::info('Initialized IpDetector Module. Ready!', $ipDetector::class);
+        LOGGER->info('Initialized IpDetector Module. Ready!', $ipDetector::class);
         return $ipDetector;
     }
 
@@ -70,7 +70,7 @@ class ConfigLoader
 
                     $domains[$domain->Domain][$subdomain->Subdomain] = $domainConfigObj;
                 } catch (RecordNotFoundException $e) {
-                    Log::error($e->getMessage(), self::class);
+                    LOGGER->error($e->getMessage(), self::class);
                 }
             }
         }
@@ -101,7 +101,7 @@ class ConfigLoader
                 ->setUpdatePrefix($module->NetworkPrefix ?? false)
                 ->build($module->Service);
 
-            Log::info('Initialized DnsService Module. Ready!', $dnsServices[$module->Name]::class);
+            LOGGER->info('Initialized DnsService Module. Ready!', $dnsServices[$module->Name]::class);
         }
 
         if(count($dnsServices) == 0) {

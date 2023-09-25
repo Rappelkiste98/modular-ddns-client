@@ -1,9 +1,9 @@
 <?php
 
-namespace Acme\Builder;
+namespace Src\Builder;
 
-use Acme\Entities\DomainZone;
-use Acme\Exception\ConfigException;
+use Src\Entities\DomainZone;
+use Src\Exception\ConfigException;
 use Modules\DnsService\DnsService;
 use Modules\DnsService\DynDnsService;
 use Modules\DnsService\IPv64Service;

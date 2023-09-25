@@ -1,8 +1,8 @@
 <?php
 
-namespace Acme\Network;
+namespace Src\Network;
 
-use Acme\Exception\BuildIPv6AddressException;
+use Src\Exception\BuildIPv6AddressException;
 use Exception;
 
 class IPv6

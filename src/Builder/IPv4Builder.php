@@ -1,8 +1,8 @@
 <?php
 
-namespace Acme\Builder;
+namespace Src\Builder;
 
-use Acme\Network\IPv4;
+use Src\Network\IPv4;
 
 class IPv4Builder
 {

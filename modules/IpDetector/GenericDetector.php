@@ -2,14 +2,14 @@
 
 namespace Modules\IpDetector;
 
-use Acme\Builder\IPv4Builder;
-use Acme\Builder\IPv6Builder;
-use Acme\Exception\BuildIPv6AddressException;
-use Acme\Exception\IpNotFoundException;
-use Acme\Log;
-use Acme\Network\IPv4;
-use Acme\Network\IPv6;
-use Acme\Network\IPv6Type;
+use Src\Builder\IPv4Builder;
+use Src\Builder\IPv6Builder;
+use Src\Exception\BuildIPv6AddressException;
+use Src\Exception\IpNotFoundException;
+use Src\Logger;
+use Src\Network\IPv4;
+use Src\Network\IPv6;
+use Src\Network\IPv6Type;
 
 class GenericDetector extends IpDetector
 {
@@ -63,7 +63,7 @@ class GenericDetector extends IpDetector
                             return $ipv6Builder->setNetworkPrefixLength($this->configPrefixLength)
                                 ->buildByAddressAndPrefix();
                         } catch (BuildIPv6AddressException $e) {
-                            Log::error('Error while building IPv6 with Address & Network Prefix-Length! Continue without Network-Prefix', $this::class);
+                            LOGGER->error('Error while building IPv6 with Address & Network Prefix-Length! Continue without Network-Prefix', $this::class);
                         }
                     }
 

@@ -2,18 +2,18 @@
 
 namespace Modules\DnsService;
 
-use Acme\Builder\IPv4Builder;
-use Acme\Builder\IPv6Builder;
-use Acme\Curl\HttpClient;
-use Acme\Entities\DnsRecord;
-use Acme\Entities\DomainZone;
-use Acme\Exception\DnsServiceException;
-use Acme\Exception\HttpClientException;
-use Acme\Log;
-use Acme\Network\DnsType;
-use Acme\Network\Domain;
-use Acme\Network\IPv4;
-use Acme\Network\IPv6;
+use Src\Builder\IPv4Builder;
+use Src\Builder\IPv6Builder;
+use Src\Curl\HttpClient;
+use Src\Entities\DnsRecord;
+use Src\Entities\DomainZone;
+use Src\Exception\DnsServiceException;
+use Src\Exception\HttpClientException;
+use Src\Logger;
+use Src\Network\DnsType;
+use Src\Network\Domain;
+use Src\Network\IPv4;
+use Src\Network\IPv6;
 
 class IPv64Service extends DnsService
 {
@@ -145,9 +145,13 @@ class IPv64Service extends DnsService
 
             $recordIpv4?->setUpdate(false);
             $recordIpv6?->setUpdate(false);
-            Log::success('Record Update "' . $baseRecord->getDnsRecordname() . '" successfully pushed!', $this::class);
+
+            $recordIpv4 === null ? : CACHE?->cacheDnsRecord($recordIpv4);
+            $recordIpv6 === null ? : CACHE?->cacheDnsRecord($recordIpv6);
+
+            LOGGER->success('Record Update "' . $baseRecord->getDnsRecordname() . '" successfully pushed!', $this::class);
         } catch (\Exception $e) {
-            Log::Error($e->getMessage(), $this::class);
+            LOGGER->Error($e->getMessage(), $this::class);
         }
     }
 
@@ -186,9 +190,9 @@ class IPv64Service extends DnsService
 
             $recordIpv4?->setUpdate(false);
             $recordIpv6?->setUpdate(false);
-            Log::success('Record Update "' . $baseRecord->getDnsRecordname() . '" successfully pushed!', $this::class);
+            LOGGER->success('Record Update "' . $baseRecord->getDnsRecordname() . '" successfully pushed!', $this::class);
         } catch (\Exception $e) {
-            Log::Error($e->getMessage(), $this::class);
+            LOGGER->Error($e->getMessage(), $this::class);
         }
     }
 
@@ -206,7 +210,7 @@ class IPv64Service extends DnsService
 
             return $response;
         } catch (\Exception $e) {
-            Log::Error($e->getMessage(), $this::class);
+            LOGGER->Error($e->getMessage(), $this::class);
         }
 
         return [];
@@ -226,7 +230,7 @@ class IPv64Service extends DnsService
 
             return $response['logs'];
         } catch (\Exception $e) {
-            Log::Error($e->getMessage(), $this::class);
+            LOGGER->Error($e->getMessage(), $this::class);
         }
 
         return [];
@@ -249,7 +253,7 @@ class IPv64Service extends DnsService
                 throw new DnsServiceException('Fetch "getDomains" Request not successfully', $response);
             }
         } catch (HttpClientException | DnsServiceException $e) {
-            Log::Error($e->getMessage(), $this::class);
+            LOGGER->Error($e->getMessage(), $this::class);
             throw $e;
         }
 
@@ -317,7 +321,7 @@ class IPv64Service extends DnsService
                 throw new DnsServiceException('Push "addDomain" Request not successfully', $response);
             }
         } catch (\Exception $e) {
-            Log::Error($e->getMessage(), $this::class);
+            LOGGER->Error($e->getMessage(), $this::class);
             throw $e;
         }
     }
@@ -340,7 +344,7 @@ class IPv64Service extends DnsService
                 throw new DnsServiceException('Push "deleteDomain" Request not successfully', $response);
             }
         } catch (\Exception $e) {
-            Log::Error($e->getMessage(), $this::class);
+            LOGGER->Error($e->getMessage(), $this::class);
             throw $e;
         }
     }
@@ -368,7 +372,7 @@ class IPv64Service extends DnsService
                 throw new DnsServiceException('Push "addRecord" Request not successfully', $response);
             }
         } catch (\Exception $e) {
-            Log::Error($e->getMessage(), $this::class);
+            LOGGER->Error($e->getMessage(), $this::class);
             throw $e;
         }
     }
@@ -396,7 +400,7 @@ class IPv64Service extends DnsService
                 throw new DnsServiceException('Push "deleteRecord" Request not successfully', $response);
             }
         } catch (\Exception $e) {
-            Log::Error($e->getMessage(), $this::class);
+            LOGGER->Error($e->getMessage(), $this::class);
             throw $e;
         }
     }

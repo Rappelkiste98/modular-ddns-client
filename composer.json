@@ -6,7 +6,7 @@
   },
   "autoload": {
     "psr-4": {
-      "Acme\\": "src/",
+      "Src\\": "src/",
       "Modules\\": "modules/"
     }
   }

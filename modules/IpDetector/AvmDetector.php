@@ -2,11 +2,11 @@
 
 namespace Modules\IpDetector;
 
-use Acme\Exception\BuildIPv6AddressException;
-use Acme\Log;
-use Acme\Network\IPv4;
-use Acme\Network\IPv6;
-use Acme\Network\IPv6Type;
+use Src\Exception\BuildIPv6AddressException;
+use Src\Logger;
+use Src\Network\IPv4;
+use Src\Network\IPv6;
+use Src\Network\IPv6Type;
 use SoapClient;
 use SoapFault;
 
@@ -56,7 +56,7 @@ class AvmDetector extends IpDetector
             try {
                 return $ipv6Builder->buildByAddressAndPrefix();
             } catch (BuildIPv6AddressException $e) {
-                Log::error('Error while building IPv6 with Address & Network Prefix-Length! Continue without Network-Prefix', $this::class);
+                LOGGER->error('Error while building IPv6 with Address & Network Prefix-Length! Continue without Network-Prefix', $this::class);
                 return $ipv6Builder->build();
             }
         } else {

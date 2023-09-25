@@ -1,15 +1,19 @@
 <?php
 
-namespace Acme\Curl;
+namespace Src\Curl;
 
-use Acme\Exception\HttpClientException;
+use Src\Exception\HttpClientException;
 use CurlHandle;
 
 class HttpClient
 {
-    public const CONTENT_TYPE_FORMDATA = 'multipart/form-data';
-    public const CONTENT_TYPE_JSON = 'application/json';
-    public const CONTENT_TYPE_WWWFORM = 'application/x-www-form-urlencoded';
+    final const CONTENT_TYPE_FORMDATA = 'multipart/form-data';
+    final const CONTENT_TYPE_JSON = 'application/json';
+    final const CONTENT_TYPE_WWWFORM = 'application/x-www-form-urlencoded';
+    final const METHOD_GET = 'GET';
+    final const METHOD_POST = 'POST';
+    final const METHOD_PUT = 'PUT';
+    final const METHOD_DELETE = 'DELETE';
     private const SUCCESS_CODES = [200, 201, 202];
 
     private string $url;
@@ -18,6 +22,7 @@ class HttpClient
     private CurlHandle $handle;
     private int $httpCode = 0;
     private bool $disableHttpCodeValidation = false;
+    private string $method = self::METHOD_GET;
 
     public function __construct(string $url, array $options = [])
     {
@@ -67,6 +72,22 @@ class HttpClient
         curl_setopt_array($this->handle, $this->options);
     }
 
+    private function getCurlOption(int $curlOption): mixed
+    {
+        return $this->options[$curlOption] ?? null;
+    }
+
+    private function setHttpMethod(string $method): self
+    {
+        $this->method = $method;
+        return $this;
+    }
+
+    public function getHttpMethod(): string
+    {
+        return $this->method;
+    }
+
     private function setHttpPost(string $contentType, string|array $data): void
     {
         $this->setHttpHeader('Content-Type', $contentType);
@@ -85,8 +106,8 @@ class HttpClient
     private function executeRequest(bool $json = false): string|array
     {
         $response = curl_exec($this->handle);
-        $this->httpCode = curl_getinfo($this->handle, CURLINFO_HTTP_CODE);
         $curlError = curl_error($this->handle);
+        $this->httpCode = curl_getinfo($this->handle, CURLINFO_HTTP_CODE);
 
         if (!$response || ($json && $response == '' || $curlError !== '')) {
             $message = sprintf('"%s" => %s', $this->getUrl(), ($curlError === '') ? 'No Response Data' : $curlError);
@@ -101,6 +122,8 @@ class HttpClient
         $responseContentType = curl_getinfo($this->handle, CURLINFO_CONTENT_TYPE);
 
         curl_close($this->handle);
+        LOGGER->request($this);
+
         $response = ($json || $responseContentType === self::CONTENT_TYPE_JSON) ? json_decode($response, true) : $response;
 
         return $response ?? ($json ? [] : '');
@@ -111,6 +134,7 @@ class HttpClient
      */
     public function getRequest(bool $json = false): string|array
     {
+        $this->setHttpMethod(self::METHOD_GET);
         return $this->executeRequest($json);
     }
 
@@ -124,6 +148,7 @@ class HttpClient
             self::CONTENT_TYPE_FORMDATA, self::CONTENT_TYPE_WWWFORM => $data,
         };
 
+        $this->setHttpMethod(self::METHOD_POST);
         $this->setHttpHeader('Content-Type', $contentType);
         $this->setCurlOption(CURLOPT_POST, true);
         $this->setCurlOption(CURLOPT_POSTFIELDS, $data);
@@ -142,6 +167,7 @@ class HttpClient
         };
         $contentLength = strlen($data);
 
+        $this->setHttpMethod(self::METHOD_PUT);
         $this->setHttpHeader('Content-Type', $contentType);
         $this->setHttpHeader('Content-Length', $contentLength);
         $this->setCurlOption(CURLOPT_CUSTOMREQUEST, 'PUT');
@@ -161,6 +187,7 @@ class HttpClient
         };
         $contentLength = strlen($data);
 
+        $this->setHttpMethod(self::METHOD_DELETE);
         $this->setHttpHeader('Content-Type', $contentType);
         $this->setHttpHeader('Content-Length', $contentLength);
         $this->setCurlOption(CURLOPT_CUSTOMREQUEST, 'DELETE');

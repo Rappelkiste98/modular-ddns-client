@@ -1,6 +1,6 @@
 <?php
 
-namespace Acme\Network;
+namespace Src\Network;
 
 class Domain
 {

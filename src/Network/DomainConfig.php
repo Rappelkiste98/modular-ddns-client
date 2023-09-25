@@ -1,11 +1,11 @@
 <?php
 
-namespace Acme\Network;
+namespace Src\Network;
 
-use Acme\Builder\IPv4Builder;
-use Acme\Builder\IPv6Builder;
-use Acme\Entities\DnsRecord;
-use Acme\Exception\RecordNotFoundException;
+use Src\Builder\IPv4Builder;
+use Src\Builder\IPv6Builder;
+use Src\Entities\DnsRecord;
+use Src\Exception\RecordNotFoundException;
 
 class DomainConfig
 {

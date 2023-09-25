@@ -1,20 +1,31 @@
 <?php
 
-use Acme\Builder\IPv6Builder;
-use Acme\ConfigLoader;
-use Acme\Entities\DnsRecord;
-use Acme\Exception\BuildIPv6AddressException;
-use Acme\Exception\ConfigException;
-use Acme\Log;
-use Acme\Network\DnsType;
-use Acme\Network\DomainConfig;
+use Src\Builder\IPv6Builder;
+use Src\ConfigLoader;
+use Src\Entities\DnsRecord;
+use Src\Exception\BuildIPv6AddressException;
+use Src\Exception\ConfigException;
+use Src\Logger;
+use Src\LoggerLevel;
+use Src\Network\DnsType;
+use Src\Network\DomainConfig;
 use Dallgoot\Yaml\Loader;
 use Dallgoot\Yaml\Yaml;
+use Src\Cache;
+use Src\FileLogger;
 
 require __DIR__ . '/vendor/autoload.php';
 
 try {
     $config = Yaml::parseFile(__DIR__ . '/config.yml', Loader::IGNORE_COMMENTS);
+    define('LOGGER', new Logger(LoggerLevel::fromName($config->General->LoggerLevel)));
+    if ($config->General->FileLogger) {
+        define('FILE_LOGGER', new FileLogger(LoggerLevel::fromName($config->General->FileLoggerLevel)));
+    }
+    if ($config->General->Cache) {
+        define('CACHE', new Cache());
+    }
+
     define('USE_IPv4', $config->Detector->IPv4 ?? false);
     define('USE_IPv6', $config->Detector->IPv6 ?? false);
     define('IP_DETECTOR', ConfigLoader::loadIpDetector($config->Detector->Name, $config->Detector->IPv6PrefixLength ?? null, $config->Detector->URL ?? null));
@@ -24,7 +35,7 @@ try {
     if (!USE_IPv4 && !USE_IPv6) {
         throw new ConfigException('IPv4 and IPv6 are deactivated. No DomainConfig DNS Update possible!');
     }
-    Log::info('DynDNS Client started....');
+    LOGGER->info('DynDNS Client started....');
 
     // If IPv4 is active than Define current Network IPv4 Address
     if (USE_IPv4) {
@@ -34,7 +45,7 @@ try {
         }
 
         define('LOCAL_IPv4', $ipv4);
-        Log::info('Current Global-Network IPv4: ' . $ipv4->getAddress());
+        LOGGER->debug('Current Global-Network IPv4: ' . $ipv4->getAddress());
     }
 
     // If IPv6 is active than Define current Network IPv6 Address
@@ -45,7 +56,7 @@ try {
         }
 
         define('LOCAL_IPv6', $ipv6);
-        Log::info('Current Global-Device IPv6: ' . $ipv6->getAddress());
+        LOGGER->debug('Current Global-Device IPv6: ' . $ipv6->getAddress());
     }
 
     // Domain Update Process
@@ -59,7 +70,7 @@ try {
             $newIpv6DnsRecord = null;
 
             if ($module === null) {
-                Log::error('DnsService Module with Name "' . $domainConfig->getModule() . '" not found! Skip.');
+                LOGGER->error('DnsService Module with Name "' . $domainConfig->getModule() . '" not found! Skip.');
                 continue;
             }
 
@@ -97,7 +108,7 @@ try {
                                 ->buildByNetworkAndInterface()
                         );
                     } catch (BuildIPv6AddressException $e) {
-                        Log::error($e->getMessage());
+                        LOGGER->error($e->getMessage());
                     }
                 } else {
                     $newIpv6DnsRecord->setIp($ipv6Builder->build());
@@ -107,33 +118,47 @@ try {
 
             // Update DomainConfig DNS-Entry
             if ((USE_IPv4 && $domainConfig->isUpdateNeeded($newIpv4DnsRecord->getIp())) || (USE_IPv6 && $domainConfig->isUpdateNeeded($newIpv6DnsRecord->getIp()))) {
-                Log::info('DOMAIN "' . $domainConfig->getDnsRecord()->getDnsRecordname() . '": Update DynDNS Entry ...', $module::class);
+                LOGGER->info('DOMAIN "' . $domainConfig->getDnsRecord()->getDnsRecordname() . '": Update DynDNS Entry ...', $module::class);
+
+                $cachedIpv4DnsRecord = USE_IPv4 ? CACHE?->loadDnsRecord($newIpv4DnsRecord) : null;
+                $cachedIpv6DnsRecord = USE_IPv4 ? CACHE?->loadDnsRecord($newIpv6DnsRecord) : null;
 
                 try {
-                    if (USE_IPv4) {
-                        Log::change($domainConfig->getDnsRecord(), $module, $domainConfig->getIpv4(), $newIpv4DnsRecord->getIp());
+                    if (USE_IPv4 && ($cachedIpv4DnsRecord === null || $cachedIpv4DnsRecord->getIp()->getAddress() !== $newIpv4DnsRecord->getIp()->getAddress())) {
+                        LOGGER->change($domainConfig->getDnsRecord(), $module, $domainConfig->getIpv4(), $newIpv4DnsRecord->getIp());
                         $module->updateDnsRecord($newIpv4DnsRecord);
-                    }
-                    if (USE_IPv6) {
-                        Log::change($domainConfig->getDnsRecord(), $module, $domainConfig->getIpv6(), $newIpv6DnsRecord->getIp());
-                        $module->updateDnsRecord($newIpv6DnsRecord);
+                    } else if (USE_IPv4) {
+                        LOGGER->info('DOMAIN "' . $domainConfig->getDnsRecord()->getDnsRecordname() . ': IPv4 DynDNS Entry no Update needed (Cached)');
                     }
 
-                    Log::success('DOMAIN "' . $domainConfig->getDnsRecord()->getDnsRecordname() . '": DynDNS Entry successfully updated', $module::class);
+                    if (USE_IPv6 && ($cachedIpv6DnsRecord === null || $cachedIpv6DnsRecord->getIp()->getAddress() !== $newIpv6DnsRecord->getIp()->getAddress())) {
+                        LOGGER->change($domainConfig->getDnsRecord(), $module, $domainConfig->getIpv6(), $newIpv6DnsRecord->getIp());
+                        $module->updateDnsRecord($newIpv6DnsRecord);
+                    } else if (USE_IPv6) {
+                        LOGGER->info('DOMAIN "' . $domainConfig->getDnsRecord()->getDnsRecordname() . ': IPv6 DynDNS Entry no Update needed (Cached)');
+                    }
+
+                    LOGGER->success('DOMAIN "' . $domainConfig->getDnsRecord()->getDnsRecordname() . '": DynDNS Entry successfully updated', $module::class);
                 } catch (Exception $e) {
-                    Log::warning('DOMAIN "' . $domainConfig->getDnsRecord()->getDnsRecordname() . '": DynDNS Entry could not be updated', $module::class);
+                    LOGGER->warning('DOMAIN "' . $domainConfig->getDnsRecord()->getDnsRecordname() . '": DynDNS Entry could not be updated', $module::class);
                 }
             } else {
-                Log::info('DOMAIN "' . $domainConfig->getDnsRecord()->getDnsRecordname() . '": DynDNS Entry no Update needed', $module::class);
+                LOGGER->info('DOMAIN "' . $domainConfig->getDnsRecord()->getDnsRecordname() . '": DynDNS Entry no Update needed', $module::class);
             }
         }
     }
 
     foreach (MODULES as $dnsService) {
-        $dnsService->push();
+        try {
+            $dnsService->push();
+        } catch (\Exception $e) {
+            LOGGER->error($e->getMessage());
+        }
     }
 
-    Log::info('DynDNS Client successfully');
+    LOGGER->success('DynDNS Client successfully');
 } catch (SoapFault | ConfigException $e) {
-    Log::error($e::class . ' -> ' . $e->getMessage());
+    LOGGER->error($e::class . ' -> ' . $e->getMessage());
+} catch (FileException $e) {
+    LOGGER->error($e->getMessage());
 }

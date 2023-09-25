@@ -1,10 +1,10 @@
 <?php
 
 namespace Modules\IpDetector;
-use Acme\Builder\IPv4Builder;
-use Acme\Builder\IPv6Builder;
-use Acme\Network\IPv4;
-use Acme\Network\IPv6;
+use Src\Builder\IPv4Builder;
+use Src\Builder\IPv6Builder;
+use Src\Network\IPv4;
+use Src\Network\IPv6;
 
 abstract class IpDetector
 {

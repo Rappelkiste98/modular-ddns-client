@@ -2,18 +2,18 @@
 
 namespace Modules\DnsService;
 
-use Acme\Builder\IPv4Builder;
-use Acme\Builder\IPv6Builder;
-use Acme\Curl\HttpClient;
-use Acme\Entities\DnsRecord;
-use Acme\Entities\DomainZone;
-use Acme\Exception\DnsServiceException;
-use Acme\Exception\HttpClientException;
-use Acme\Log;
-use Acme\Network\DnsType;
-use Acme\Network\Domain;
-use Acme\Network\IPv4;
-use Acme\Network\IPv6;
+use Src\Builder\IPv4Builder;
+use Src\Builder\IPv6Builder;
+use Src\Curl\HttpClient;
+use Src\Entities\DnsRecord;
+use Src\Entities\DomainZone;
+use Src\Exception\DnsServiceException;
+use Src\Exception\HttpClientException;
+use Src\Logger;
+use Src\Network\DnsType;
+use Src\Network\Domain;
+use Src\Network\IPv4;
+use Src\Network\IPv6;
 
 class NetcupService extends DnsService
 {
@@ -139,17 +139,17 @@ class NetcupService extends DnsService
             $response = $client->postRequest($request, HttpClient::CONTENT_TYPE_JSON, true);
 
             if ($response['status'] === 'success') {
-                Log::info('Netcup API Login successfully');
+                LOGGER->debug('Netcup API Login successfully', $this::class);
                 $this->apiSession = $response['responsedata']['apisessionid'];
                 return;
             } else if ($response['statuscode'] === 4013) {
                 $message = $response['longmessage'] . ' [ADDITIONAL INFORMATION: This error from the netcup DNS API also often indicates that you have supplied wrong API credentials. Please check them in the config file.]';
-                Log::error($message, $this::class);
+                LOGGER->error($message, $this::class);
             } else {
-                Log::error($response['longmessage'], $this::class);
+                LOGGER->error($response['longmessage'], $this::class);
             }
         } catch (HttpClientException $e) {
-            Log::error($e->getMessage(), $this::class);
+            LOGGER->error($e->getMessage(), $this::class);
             throw $e;
         }
     }
@@ -178,12 +178,12 @@ class NetcupService extends DnsService
             $response = $client->postRequest($request, HttpClient::CONTENT_TYPE_JSON, true);
 
             if ($response['status'] === 'success') {
-                Log::info('Netcup API Logout successfully');
+                LOGGER->debug('Netcup API Logout successfully', $this::class);
             } else {
-                Log::error($response['longmessage'], $this::class);
+                LOGGER->error($response['longmessage'], $this::class);
             }
         } catch (HttpClientException $e) {
-            Log::warning($e->getMessage(), $this::class);
+            LOGGER->warning($e->getMessage(), $this::class);
             throw $e;
         }
     }
@@ -217,10 +217,10 @@ class NetcupService extends DnsService
                 throw new DnsServiceException('Fetch "InfoDnsRecords" Request not successfully', $response);
             }
         } catch (DnsServiceException $e) {
-            Log::error($e->getMessage() . ' => ' . $response['longmessage'], $this::class);
+            LOGGER->error($e->getMessage() . ' => ' . $response['longmessage'], $this::class);
             return null;
         } catch (HttpClientException $e) {
-            Log::Error($e->getMessage(), $this::class);
+            LOGGER->Error($e->getMessage(), $this::class);
             return null;
         }
 
@@ -258,10 +258,10 @@ class NetcupService extends DnsService
                 throw new DnsServiceException('Fetch "InfoDnsRecords" Request not successfully', $response);
             }
         } catch (DnsServiceException $e) {
-            Log::error($e->getMessage() . ' => ' . $response['longmessage'], $this::class);
+            LOGGER->error($e->getMessage() . ' => ' . $response['longmessage'], $this::class);
             throw $e;
         } catch (HttpClientException $e) {
-            Log::Error($e->getMessage(), $this::class);
+            LOGGER->Error($e->getMessage(), $this::class);
             throw $e;
         }
 
@@ -328,12 +328,12 @@ class NetcupService extends DnsService
                 throw new DnsServiceException('Push "updateDnsZone" Request not successfully', $response);
             }
 
-            Log::success('Zone Update for "' . $zone->getDomain()->getDomainname() . '" successfully pushed!', $this::class);
+            LOGGER->success('Zone Update for "' . $zone->getDomain()->getDomainname() . '" successfully pushed!', $this::class);
         } catch (DnsServiceException $e) {
-            Log::error($e->getMessage() . ' => ' . $response['longmessage'], $this::class);
+            LOGGER->error($e->getMessage() . ' => ' . $response['longmessage'], $this::class);
             throw $e;
         } catch (HttpClientException $e) {
-            Log::Error($e->getMessage(), $this::class);
+            LOGGER->Error($e->getMessage(), $this::class);
             throw $e;
         }
     }
@@ -380,12 +380,12 @@ class NetcupService extends DnsService
                 throw new DnsServiceException('Push "updateDnsRecords" Request not successfully', $response);
             }
 
-            Log::success('Records Update for "' . $zone->getDomain()->getDomainname() . '" successfully pushed!', $this::class);
+            LOGGER->success('Records Update for "' . $zone->getDomain()->getDomainname() . '" successfully pushed!', $this::class);
         } catch (DnsServiceException $e) {
-            Log::error($e->getMessage() . ' => ' . $response['longmessage'], $this::class);
+            LOGGER->error($e->getMessage() . ' => ' . $response['longmessage'], $this::class);
             throw $e;
         } catch (HttpClientException $e) {
-            Log::Error($e->getMessage(), $this::class);
+            LOGGER->Error($e->getMessage(), $this::class);
             throw $e;
         }
     }
