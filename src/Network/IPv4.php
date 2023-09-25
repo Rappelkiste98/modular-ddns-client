@@ -27,9 +27,10 @@ class IPv4
         return $this->address;
     }
 
-    public function setAddress(string $address): void
+    public function setAddress(string $address): self
     {
         $this->address = $address;
+        return $this;
     }
 
     public function getSubnetMask(): ?string
@@ -37,9 +38,10 @@ class IPv4
         return $this->subnetMask;
     }
 
-    public function setSubnetMask(?string $subnetMask): void
+    public function setSubnetMask(?string $subnetMask): self
     {
         $this->subnetMask = $subnetMask;
+        return $this;
     }
 
     public function getPrefix(): ?int
@@ -47,8 +49,9 @@ class IPv4
         return $this->prefix;
     }
 
-    public function setPrefix(?int $prefix): void
+    public function setPrefix(?int $prefix): self
     {
         $this->prefix = $prefix;
+        return $this;
     }
 }

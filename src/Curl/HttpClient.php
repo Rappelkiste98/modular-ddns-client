@@ -7,11 +7,17 @@ use CurlHandle;
 
 class HttpClient
 {
+    public const CONTENT_TYPE_FORMDATA = 'multipart/form-data';
+    public const CONTENT_TYPE_JSON = 'application/json';
+    public const CONTENT_TYPE_WWWFORM = 'application/x-www-form-urlencoded';
+    private const SUCCESS_CODES = [200, 201, 202];
+
     private string $url;
     private array $headers = [];
     private array $options = [CURLOPT_TIMEOUT => 90, CURLOPT_RETURNTRANSFER => true];
     private CurlHandle $handle;
     private int $httpCode = 0;
+    private bool $disableHttpCodeValidation = false;
 
     public function __construct(string $url, array $options = [])
     {
@@ -76,18 +82,36 @@ class HttpClient
     /**
      * @throws HttpClientException
      */
-    public function getRequest(bool $json = false): string|array
+    private function executeRequest(bool $json = false): string|array
     {
         $response = curl_exec($this->handle);
         $this->httpCode = curl_getinfo($this->handle, CURLINFO_HTTP_CODE);
-        if(!$response || ($json && $response == '')) {
-            $message = (curl_error($this->handle) == '') ? 'No Response Data' : curl_error($this->handle);
+        $curlError = curl_error($this->handle);
+
+        if (!$response || ($json && $response == '' || $curlError !== '')) {
+            $message = sprintf('"%s" => %s', $this->getUrl(), ($curlError === '') ? 'No Response Data' : $curlError);
             throw new HttpClientException($message);
         }
 
-        curl_close($this->handle);
+        if (!in_array($this->httpCode, $this::SUCCESS_CODES) && !$this->isDisableHttpCodeValidation()) {
+            $message = sprintf('"%s" => HttpCode: %d Response: %s', $this->url, $this->getHttpCode(), $response);
+            throw new HttpClientException($message);
+        }
 
-        return $json ? json_decode($response, true) : $response;
+        $responseContentType = curl_getinfo($this->handle, CURLINFO_CONTENT_TYPE);
+
+        curl_close($this->handle);
+        $response = ($json || $responseContentType === self::CONTENT_TYPE_JSON) ? json_decode($response, true) : $response;
+
+        return $response ?? ($json ? [] : '');
+    }
+
+    /**
+     * @throws HttpClientException
+     */
+    public function getRequest(bool $json = false): string|array
+    {
+        return $this->executeRequest($json);
     }
 
     /**
@@ -95,27 +119,16 @@ class HttpClient
      */
     public function postRequest(string|array $data, string $contentType = '', bool $json = false): string|array
     {
-        $data = ($contentType == 'json') ? json_encode($data) : $data;
-        $contentType = match ($contentType) {
-            'json' => 'application/json',
-            'form-data' => 'multipart/form-data',
-            default => 'application/x-www-form-urlencoded',
+        $data = match ($contentType) {
+            self::CONTENT_TYPE_JSON => json_encode($data),
+            self::CONTENT_TYPE_FORMDATA, self::CONTENT_TYPE_WWWFORM => $data,
         };
 
         $this->setHttpHeader('Content-Type', $contentType);
         $this->setCurlOption(CURLOPT_POST, true);
         $this->setCurlOption(CURLOPT_POSTFIELDS, $data);
 
-        $response = curl_exec($this->handle);
-        $this->httpCode = curl_getinfo($this->handle, CURLINFO_HTTP_CODE);
-        if(!$response || ($json && $response == '')) {
-            $message = (curl_error($this->handle) == '') ? 'No Response Data' : curl_error($this->handle);
-            throw new HttpClientException($message);
-        }
-
-        curl_close($this->handle);
-
-        return $json ? json_decode($response, true) : $response;
+        return $this->executeRequest($json);
     }
 
     /**
@@ -123,29 +136,18 @@ class HttpClient
      */
     public function putRequest(string|array $data, string $contentType = '', bool $json = false): string|array
     {
-        $data = ($contentType == 'json') ? json_encode($data) : $data;
-        $contentLength = strlen(($contentType == 'form-data') ? strlen(http_build_query($data)) : $data);
-        $contentType = match ($contentType) {
-            'json' => 'application/json',
-            'form-data' => 'multipart/form-data',
-            default => 'application/x-www-form-urlencoded',
+        $data = match ($contentType) {
+            self::CONTENT_TYPE_JSON => json_encode($data),
+            self::CONTENT_TYPE_FORMDATA, self::CONTENT_TYPE_WWWFORM => http_build_query($data),
         };
+        $contentLength = strlen($data);
 
         $this->setHttpHeader('Content-Type', $contentType);
         $this->setHttpHeader('Content-Length', $contentLength);
         $this->setCurlOption(CURLOPT_CUSTOMREQUEST, 'PUT');
         $this->setCurlOption(CURLOPT_POSTFIELDS, $data);
 
-        $response = curl_exec($this->handle);
-        $this->httpCode = curl_getinfo($this->handle, CURLINFO_HTTP_CODE);
-        if(!$response || ($json && $response == '')) {
-            $message = (curl_error($this->handle) == '') ? 'No Response Data' : curl_error($this->handle);
-            throw new HttpClientException($message);
-        }
-
-        curl_close($this->handle);
-
-        return $json ? json_decode($response, true) : $response;
+        return $this->executeRequest($json);
     }
 
     /**
@@ -153,33 +155,39 @@ class HttpClient
      */
     public function deleteRequest(string|array $data, string $contentType = '', bool $json = false): string|array
     {
-        $data = ($contentType == 'json') ? json_encode($data) : $data;
-        $contentLength = strlen(($contentType == 'form-data') ? strlen(http_build_query($data)) : $data);
-        $contentType = match ($contentType) {
-            'json' => 'application/json',
-            'form-data' => 'multipart/form-data',
-            default => 'application/x-www-form-urlencoded',
+        $data = match ($contentType) {
+            self::CONTENT_TYPE_JSON => json_encode($data),
+            self::CONTENT_TYPE_FORMDATA, self::CONTENT_TYPE_WWWFORM => http_build_query($data),
         };
+        $contentLength = strlen($data);
 
         $this->setHttpHeader('Content-Type', $contentType);
         $this->setHttpHeader('Content-Length', $contentLength);
         $this->setCurlOption(CURLOPT_CUSTOMREQUEST, 'DELETE');
+
         $this->setCurlOption(CURLOPT_POSTFIELDS, $data);
 
-        $response = curl_exec($this->handle);
-        $this->httpCode = curl_getinfo($this->handle, CURLINFO_HTTP_CODE);
-        if(!$response || ($json && $response == '')) {
-            $message = (curl_error($this->handle) == '') ? 'No Response Data' : curl_error($this->handle);
-            throw new HttpClientException($message);
-        }
-
-        curl_close($this->handle);
-
-        return $json ? json_decode($response, true) : $response;
+        return $this->executeRequest($json);
     }
 
     public function getHttpCode(): int
     {
         return $this->httpCode;
+    }
+
+    public function getUrl(): string
+    {
+        return $this->url;
+    }
+
+    public function isDisableHttpCodeValidation(): bool
+    {
+        return $this->disableHttpCodeValidation;
+    }
+
+    public function setDisableHttpCodeValidation(bool $disableHttpCodeValidation = true): self
+    {
+        $this->disableHttpCodeValidation = $disableHttpCodeValidation;
+        return $this;
     }
 }

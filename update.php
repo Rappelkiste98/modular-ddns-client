@@ -2,13 +2,14 @@
 
 use Acme\Builder\IPv6Builder;
 use Acme\ConfigLoader;
+use Acme\Entities\DnsRecord;
 use Acme\Exception\BuildIPv6AddressException;
 use Acme\Exception\ConfigException;
 use Acme\Log;
-use Acme\Network\Domain;
-use Acme\Network\DomainRecord;
+use Acme\Network\DnsType;
+use Acme\Network\DomainConfig;
+use Dallgoot\Yaml\Loader;
 use Dallgoot\Yaml\Yaml;
-use \Dallgoot\Yaml\Loader;
 
 require __DIR__ . '/vendor/autoload.php';
 
@@ -21,7 +22,7 @@ try {
     define('DOMAINS', ConfigLoader::loadDomains($config->Domains));
 
     if (!USE_IPv4 && !USE_IPv6) {
-        throw new ConfigException('IPv4 and IPv6 are deactivated. No Domain DNS Update possible!');
+        throw new ConfigException('IPv4 and IPv6 are deactivated. No DomainConfig DNS Update possible!');
     }
     Log::info('DynDNS Client started....');
 
@@ -49,39 +50,48 @@ try {
 
     // Domain Update Process
     /**
-     * @var Domain[] $subdomains
+     * @var DomainConfig[] $domainConfigs
      */
-    foreach (DOMAINS as $domainName => $subdomains) {
-        foreach ($subdomains as $subdomainName => $subdomain) {
-            $module = MODULES[$subdomain->getModule()] ?? null;
-            $newDomainRecord = new DomainRecord($subdomain);
+    foreach (DOMAINS as $domainName => $domainConfigs) {
+        foreach ($domainConfigs as $subdomain => $domainConfig) {
+            $module = MODULES[$domainConfig->getModule()] ?? null;
+            $newIpv4DnsRecord = null;
+            $newIpv6DnsRecord = null;
 
             if ($module === null) {
-                Log::error('DnsService Module with Name "' . $subdomain->getModule() . '" not found! Skip.');
+                Log::error('DnsService Module with Name "' . $domainConfig->getModule() . '" not found! Skip.');
                 continue;
             }
 
             // Set new IPv4 when IPv4 Update Enabled!
             if (USE_IPv4) {
-                if ($subdomain->getStaticIpv4() !== null && $subdomain->getStaticIpv4()->validate()) {
-                    $newDomainRecord->setIpv4($subdomain->getStaticIpv4());
+                $newIpv4DnsRecord = (new DnsRecord)->setSubDomain($domainConfig->getDnsRecord()->getSubDomain())
+                    ->setDomain($domainConfig->getDnsRecord()->getDomain())
+                    ->setType(DnsType::A);
+
+                if ($domainConfig->getStaticIpv4() !== null && $domainConfig->getStaticIpv4()->validate()) {
+                    $newIpv4DnsRecord->setIp($domainConfig->getStaticIpv4());
                 } else {
-                    $newDomainRecord->setIpv4(LOCAL_IPv4);
+                    $newIpv4DnsRecord->setIp(LOCAL_IPv4);
                 }
             }
 
             // Set new IPv6 when IPv6 Update Enabled!
             if (USE_IPv6) {
+                $newIpv6DnsRecord = (new DnsRecord)
+                    ->setSubDomain($domainConfig->getDnsRecord()->getSubDomain())
+                    ->setDomain($domainConfig->getDnsRecord()->getDomain())
+                    ->setType(DnsType::AAAA);
                 $ipv6Builder = new IPv6Builder();
                 $ipv6Builder->setAddress(LOCAL_IPv6->getAddress())
                     ->setNetworkPrefix(LOCAL_IPv6->getNetworkPrefix())
                     ->setNetworkPrefixLength(LOCAL_IPv6->getNetworkPrefixLength());
 
-                $staticInterface = $subdomain->getStaticIpv6Identifier()?->getInterfaceIdentifier();
+                $staticInterface = $domainConfig->getStaticIpv6Identifier()?->getInterfaceIdentifier();
 
                 if ($staticInterface !== null) {
                     try {
-                        $newDomainRecord->setIpv6(
+                        $newIpv6DnsRecord->setIp(
                             $ipv6Builder
                                 ->setInterfaceIdentifier($staticInterface)
                                 ->buildByNetworkAndInterface()
@@ -90,31 +100,37 @@ try {
                         Log::error($e->getMessage());
                     }
                 } else {
-                    $newDomainRecord->setIpv6($ipv6Builder->build());
+                    $newIpv6DnsRecord->setIp($ipv6Builder->build());
                 }
             }
 
-            // Update Domain DNS-Entry
-            if ((USE_IPv4 && $subdomain->isUpdateNeeded($newDomainRecord->getIpv4())) || (USE_IPv6 && $subdomain->isUpdateNeeded($newDomainRecord->getIpv6()))) {
-                Log::info('DOMAIN "' . $subdomain->getDomainname() . '": Update DynDNS Entry ...', $module::class);
 
-                if(USE_IPv4) {
-                    Log::change($subdomain, $module, $subdomain->getIpv4(), $newDomainRecord->getIpv4());
-                }
-                if(USE_IPv6) {
-                    Log::change($subdomain, $module, $subdomain->getIpv6(), $newDomainRecord->getIpv6());
-                }
+            // Update DomainConfig DNS-Entry
+            if ((USE_IPv4 && $domainConfig->isUpdateNeeded($newIpv4DnsRecord->getIp())) || (USE_IPv6 && $domainConfig->isUpdateNeeded($newIpv6DnsRecord->getIp()))) {
+                Log::info('DOMAIN "' . $domainConfig->getDnsRecord()->getDnsRecordname() . '": Update DynDNS Entry ...', $module::class);
 
                 try {
-                    //$response = $module->setDomainInformation($newDomainRecord);
-                    Log::success('DOMAIN "' . $subdomain->getDomainname() . '": DynDNS Entry successfully updated', $module::class);
+                    if (USE_IPv4) {
+                        Log::change($domainConfig->getDnsRecord(), $module, $domainConfig->getIpv4(), $newIpv4DnsRecord->getIp());
+                        $module->updateDnsRecord($newIpv4DnsRecord);
+                    }
+                    if (USE_IPv6) {
+                        Log::change($domainConfig->getDnsRecord(), $module, $domainConfig->getIpv6(), $newIpv6DnsRecord->getIp());
+                        $module->updateDnsRecord($newIpv6DnsRecord);
+                    }
+
+                    Log::success('DOMAIN "' . $domainConfig->getDnsRecord()->getDnsRecordname() . '": DynDNS Entry successfully updated', $module::class);
                 } catch (Exception $e) {
-                    Log::warning('DOMAIN "' . $subdomain->getDomainname() . '": DynDNS Entry could not be updated', $module::class);
+                    Log::warning('DOMAIN "' . $domainConfig->getDnsRecord()->getDnsRecordname() . '": DynDNS Entry could not be updated', $module::class);
                 }
             } else {
-                Log::info('DOMAIN "' . $subdomain->getDomainname() . '": DynDNS Entry no Update needed', $module::class);
+                Log::info('DOMAIN "' . $domainConfig->getDnsRecord()->getDnsRecordname() . '": DynDNS Entry no Update needed', $module::class);
             }
         }
+    }
+
+    foreach (MODULES as $dnsService) {
+        $dnsService->push();
     }
 
     Log::info('DynDNS Client successfully');

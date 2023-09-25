@@ -28,9 +28,10 @@ class IPv6
         }
     }
 
-    public function setAddress(?string $address): void
+    public function setAddress(?string $address): self
     {
         $this->address = $address;
+        return $this;
     }
 
     public function getAddress(): ?string
@@ -43,9 +44,10 @@ class IPv6
         return $this->networkPrefix;
     }
 
-    public function setNetworkPrefix(?string $networkPrefix): void
+    public function setNetworkPrefix(?string $networkPrefix): self
     {
         $this->networkPrefix = $networkPrefix;
+        return $this;
     }
 
     public function getInterfaceIdentifier(): ?string
@@ -53,9 +55,10 @@ class IPv6
         return $this->interfaceIdentifier;
     }
 
-    public function setInterfaceIdentifier(?string $interfaceIdentifier): void
+    public function setInterfaceIdentifier(?string $interfaceIdentifier): self
     {
         $this->interfaceIdentifier = $interfaceIdentifier;
+        return $this;
     }
 
     public function getNetworkPrefixLength(): ?int
@@ -63,9 +66,10 @@ class IPv6
         return $this->networkPrefixLength;
     }
 
-    public function setNetworkPrefixLength(?int $networkPrefixLength): void
+    public function setNetworkPrefixLength(?int $networkPrefixLength): self
     {
         $this->networkPrefixLength = $networkPrefixLength;
+        return $this;
     }
 
     public function getType(): IPv6Type
@@ -73,8 +77,9 @@ class IPv6
         return $this->type;
     }
 
-    public function setType(?IPv6Type $type): void
+    public function setType(?IPv6Type $type): self
     {
         $this->type = $type;
+        return $this;
     }
 }

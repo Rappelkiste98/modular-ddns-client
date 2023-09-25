@@ -2,6 +2,7 @@
 
 namespace Acme\Builder;
 
+use Acme\Entities\DomainZone;
 use Acme\Exception\ConfigException;
 use Modules\DnsService\DnsService;
 use Modules\DnsService\DynDnsService;
@@ -10,50 +11,52 @@ use Modules\DnsService\NetcupService;
 
 class DnsServiceBuilder
 {
-    private string $updateUrl = '';
-    private string $updateKey = '';
-    private string $apiUrl = '';
-    private string $apiKey = '';
-    private string $username = '';
-    private string $password = '';
+    /** @var DomainZone[] $dnsZones */
+    private array $dnsZones= [];
+    private ?string $updateUrl = null;
+    private ?string $updateKey = null;
+    private ?string $apiUrl = null;
+    private ?string $apiKey = null;
+    private ?string $username = null;
+    private ?string $password = null;
     private bool $updatePrefix = false;
 
-    public function setUpdateUrl(string $updateUrl): self
+    public function setUpdateUrl(?string $updateUrl): self
     {
         $this->updateUrl = $updateUrl;
 
         return $this;
     }
 
-    public function setUpdateKey(string $updateKey): self
+    public function setUpdateKey(?string $updateKey): self
     {
         $this->updateKey = $updateKey;
 
         return $this;
     }
 
-    public function setApiUrl(string $apiUrl): self
+    public function setApiUrl(?string $apiUrl): self
     {
         $this->apiUrl = $apiUrl;
 
         return $this;
     }
 
-    public function setApiKey(string $apiKey): self
+    public function setApiKey(?string $apiKey): self
     {
         $this->apiKey = $apiKey;
 
         return $this;
     }
 
-    public function setUsername(string $username): self
+    public function setUsername(?string $username): self
     {
         $this->username = $username;
 
         return $this;
     }
 
-    public function setPassword(string $password): self
+    public function setPassword(?string $password): self
     {
         $this->password = $password;
 
@@ -65,6 +68,10 @@ class DnsServiceBuilder
         $this->updatePrefix = $updatePrefix;
 
         return $this;
+    }
+
+    public function addDnsZone(DomainZone $zone){
+        $this->dnsZones[] = $zone;
     }
 
     /**

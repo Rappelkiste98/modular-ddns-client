@@ -3,43 +3,87 @@
 namespace Modules\DnsService;
 
 use Acme\Curl\HttpClient;
+use Acme\Entities\DnsRecord;
+use Acme\Entities\DomainZone;
+use Acme\Exception\DnsServiceException;
 use Acme\Log;
-use Acme\Module;
 use Acme\Network\Domain;
-use Acme\Network\DomainDto;
-use Acme\Network\DomainRecord;
+use Acme\Network\IPv4;
+use Acme\Network\IPv6;
 
-class DynDnsService implements DnsService
+class DynDnsService extends DnsService
 {
-    const NAME = 'DynDNS';
-    private string $updateUrl;
-    private string $updateKey;
+    final const NAME = 'DynDNS';
+    private ?string $updateUrl;
+    private ?string $updateKey;
 
-    public function __construct(string $updateUrl, string $updateKey)
+    public function __construct(?string $updateUrl, ?string $updateKey)
     {
         $this->updateUrl = $updateUrl;
         $this->updateKey = $updateKey;
     }
 
-    public function getDomainInformation(Domain $domain): array
+    public function getDomainZone(Domain $domain): ?DomainZone
     {
-        return [];
+        return $this->domainZones[$domain->getDomainname()] ?? null;
     }
 
-    public function setDomainInformation(DomainRecord $domainRecord): bool
+    /**
+     * Update DnsRecord Data and add to PushQuery
+     */
+    public function updateDnsRecord(DnsRecord $record): void
     {
+        $domain = (new Domain())->setDomain($record->getDomain());
+        $zone = $this->getDomainZone($domain) ?? (new DomainZone)->setDomain($domain);
+
+        $record->setUpdate();
+        $zone->addRecord($record);
+
+        $this->domainZones[] = $zone;
+    }
+
+    /**
+     * Pushes local Entity changes to Remote API
+     */
+    public function push(): void
+    {
+        foreach ($this->getDomainZones() as $zone) {
+            foreach ($zone->getRecords() as $record) {
+                if ($record->isUpdate() || $record->isCreate() || $record->isDelete()) {
+                    if ($record->getIp() instanceof IPv4) {
+                        $recordIpv4 = $record;
+                        $recordIpv6 = $this->findDnsRecordByDomainameAndIpClass($record->getDnsRecordname(), IPv6::class);
+                    } else {
+                        $recordIpv6 = $record;
+                        $recordIpv4 = $this->findDnsRecordByDomainameAndIpClass($record->getDnsRecordname(), IPv4::class);
+                    }
+
+                    $this->execDDnsUpdate($recordIpv4, $recordIpv6);
+                }
+            }
+        }
+    }
+
+    // ------------------------------------------ Custom Service Methods ------------------------------------------
+
+    public function execDDnsUpdate(?DnsRecord $recordIpv4, ?DnsRecord $recordIpv6): void
+    {
+        if ($recordIpv4 === null && $recordIpv6 === null) {
+            return;
+        }
+        $baseRecord = $recordIpv4 ?? $recordIpv6;
+
         $url = HttpClient::addUrlParams($this->updateUrl, [
             'key' => $this->updateKey,
-            'host' => $domainRecord->getDomain()->getRecordDomainname()
+            'host' => $baseRecord->getDnsRecordname(),
         ]);
 
-        if(USE_IPv4 && !is_null($domainRecord->getIpv4())) {
-            $url = HttpClient::addUrlParams($url, ['ip' => $domainRecord->getIpv4()->getAddress()]);
-
+        if(USE_IPv4 && !is_null($recordIpv4->getIp())) {
+            $url = HttpClient::addUrlParams($url, ['ip' => $recordIpv4->getIp()->getAddress()]);
         }
 
-        if (USE_IPv6 && !is_null($domainRecord->getIpv6())) {
-            $url = HttpClient::addUrlParams($url, ['ip6' => $domainRecord->getIpv6()->getAddress()]);
+        if (USE_IPv6 && !is_null($recordIpv6->getIp())) {
+            $url = HttpClient::addUrlParams($url, ['ip6' => $recordIpv6->getIp()->getAddress()]);
         }
 
         $client = new HttpClient($url);
@@ -47,10 +91,14 @@ class DynDnsService implements DnsService
         try {
             $response = $client->getRequest();
 
-            return str_contains($response, 'Updated 1 hostname');
+            if (!str_contains($response, 'Updated 1 hostname')) {
+                throw new DnsServiceException('Set Record Request not succesfully', $response);
+            }
+            $recordIpv4?->setUpdate(false);
+            $recordIpv6?->setUpdate(false);
+            Log::success('Record Update "' . $baseRecord->getDnsRecordname() . '" successfully pushed!', $this::class);
         } catch (\Exception $e) {
-            Log::Error($e->getMessage(), $this);
-            return false;
+            Log::error($e->getMessage(), $this::class);
         }
     }
 }

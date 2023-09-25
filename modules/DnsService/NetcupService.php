@@ -2,34 +2,127 @@
 
 namespace Modules\DnsService;
 
+use Acme\Builder\IPv4Builder;
+use Acme\Builder\IPv6Builder;
 use Acme\Curl\HttpClient;
+use Acme\Entities\DnsRecord;
+use Acme\Entities\DomainZone;
+use Acme\Exception\DnsServiceException;
+use Acme\Exception\HttpClientException;
 use Acme\Log;
+use Acme\Network\DnsType;
 use Acme\Network\Domain;
-use Acme\Network\DomainDto;
-use Acme\Network\DomainRecord;
+use Acme\Network\IPv4;
+use Acme\Network\IPv6;
 
-class NetcupService implements DnsService
+class NetcupService extends DnsService
 {
-    const NAME = 'Netcup';
-    const API_URL = 'https://ccp.netcup.net/run/webservice/servers/endpoint.php?JSON';
+    final const NAME = 'Netcup';
+    private const API_URL = 'https://ccp.netcup.net/run/webservice/servers/endpoint.php?JSON';
 
     private string $apiUrl;
+    private ?string $customerNr;
+    private ?string $apiPassword;
+    private ?string $apiKey;
+    private ?string $apiSession = null;
+    private bool $initialized = false;
 
-    private string $customerNr;
-    private string $apiPassword;
-    private string $apiKey;
-    private string $apiSession = '';
-
-    public function __construct(?string $apiURL, string $customerNr, string $apiPassword, string $apiKey)
+    public function __construct(?string $apiURL, ?string $customerNr, ?string $apiPassword, ?string $apiKey)
     {
         $this->customerNr = $customerNr;
         $this->apiPassword = $apiPassword;
         $this->apiKey = $apiKey;
 
         $this->apiUrl = $apiURL ?? self::API_URL;
+
+        try {
+            $this->login();
+            $this->initialized = true;
+        } catch (\Exception $e) {
+        }
     }
 
-    private function login(): bool
+    public function __destruct()
+    {
+        try {
+            $this->logout();
+        } catch (DnsServiceException | HttpClientException $e) {
+        }
+    }
+
+    /**
+     * @throws DnsServiceException
+     * @throws HttpClientException
+     */
+    public function getDomainZone(Domain $domain): DomainZone|null
+    {
+        if (count($this->domainZones) == 0) {
+            $this->domainZones[$domain->getDomainname()] = $this->fetchInfoDnsZone($domain);
+        }
+
+        return $this->domainZones[$domain->getDomainname()] ?? null;
+    }
+
+
+    /**
+     * Update DnsRecord Data and add to PushQuery
+     *
+     * @throws HttpClientException
+     * @throws DnsServiceException
+     */
+    public function updateDnsRecord(DnsRecord $record): void
+    {
+        $domain = (new Domain())->setDomain($record->getDomain());
+        $zone = $this->getDomainZone($domain);
+
+        if ($zone === null) {
+            throw new DnsServiceException('DomainZone "' . $domain->getDomainname() . '" not found! Skip');
+        }
+
+        $zoneRecord = $this->findDnsRecord($record);
+        if ($zoneRecord === null) {
+            $record->setCreate();
+            $zone->addRecord($record);
+        } else if ($zoneRecord->getIp()->getAddress() !== $record->getIp()->getAddress()) {
+            $zoneRecord->setIp($record->getIp())
+                ->setUpdate();
+        }
+    }
+
+    /**
+     * Pushes local Entity changes to Remote API
+     *
+     * @throws HttpClientException
+     * @throws DnsServiceException
+     */
+    public function push(): void
+    {
+        foreach ($this->getDomainZones() as $zone) {
+            $zone->setTtl(300);
+            $isPushNeeded = false;
+
+            foreach ($zone->getRecords() as $record) {
+                if ($record->isUpdate() || $record->isCreate() || $record->isDelete()) {
+                    $isPushNeeded = true;
+                }
+            }
+
+            if ($zone->getTtl() !== 300) {
+                $this->pushUpdateDnsZone($zone);
+            }
+
+            if ($isPushNeeded) {
+                $this->pushUpdateDnsRecords($zone);
+            }
+        }
+    }
+
+    // ------------------------------------------ Custom Service Methods ------------------------------------------
+
+    /**
+     * @throws HttpClientException
+     */
+    private function login(): void
     {
         $request = [
             'action' => 'login',
@@ -41,24 +134,36 @@ class NetcupService implements DnsService
         ];
 
         $client = new HttpClient($this->apiUrl);
-        $response = $client->postRequest($request, 'json', true);
 
-        if($response['status'] === 'success') {
-            Log::info('Netcup API Login successfully');
-            $this->apiSession = $response['responsedata']['apisessionid'];
-            return true;
-        } else if($response['statuscode'] === 4013) {
-            $message = $response['longmessage'] . ' [ADDITIONAL INFORMATION: This error from the netcup DNS API also often indicates that you have supplied wrong API credentials. Please check them in the config file.]';
-            Log::error($message, $this);
-        } else {
-            Log::error($response['longmessage'], $this);
+        try {
+            $response = $client->postRequest($request, HttpClient::CONTENT_TYPE_JSON, true);
+
+            if ($response['status'] === 'success') {
+                Log::info('Netcup API Login successfully');
+                $this->apiSession = $response['responsedata']['apisessionid'];
+                return;
+            } else if ($response['statuscode'] === 4013) {
+                $message = $response['longmessage'] . ' [ADDITIONAL INFORMATION: This error from the netcup DNS API also often indicates that you have supplied wrong API credentials. Please check them in the config file.]';
+                Log::error($message, $this::class);
+            } else {
+                Log::error($response['longmessage'], $this::class);
+            }
+        } catch (HttpClientException $e) {
+            Log::error($e->getMessage(), $this::class);
+            throw $e;
         }
-
-        return false;
     }
 
-    private function logout(): bool
+    /**
+     * @throws HttpClientException
+     * @throws DnsServiceException
+     */
+    private function logout(): void
     {
+        if (!$this->initialized || $this->apiSession === null) {
+            throw new DnsServiceException('Netcup Service failed initialization');
+        }
+
         $request = [
             'action' => 'logout',
             'param' => [
@@ -69,42 +174,219 @@ class NetcupService implements DnsService
         ];
 
         $client = new HttpClient($this->apiUrl);
-        $response = $client->postRequest($request, 'json', true);
+        try {
+            $response = $client->postRequest($request, HttpClient::CONTENT_TYPE_JSON, true);
 
-        if($response['status'] === 'success') {
-            Log::info('Netcup API Logout successfully');
-            return true;
-        } else {
-            Log::error($response['longmessage'], $this);
+            if ($response['status'] === 'success') {
+                Log::info('Netcup API Logout successfully');
+            } else {
+                Log::error($response['longmessage'], $this::class);
+            }
+        } catch (HttpClientException $e) {
+            Log::warning($e->getMessage(), $this::class);
+            throw $e;
         }
-
-        return false;
     }
 
-    private function getZoneInformation(Domain $domain):array
+    /**
+     * @throws HttpClientException
+     * @throws DnsServiceException
+     */
+    public function fetchInfoDnsZone(Domain $domain): ?DomainZone
     {
+        if (!$this->initialized || $this->apiSession === null) {
+            throw new DnsServiceException('Netcup Service failed initialization');
+        }
+
         $request = [
             'action' => 'infoDnsZone',
             'param' => [
-                'domainname' => $domain->getBase(),
+                'domainname' => $domain->getDomain(),
                 'customernumber' => $this->customerNr,
                 'apikey' => $this->apiKey,
                 'apisessionid' => $this->apiSession
             ]
         ];
+
+        $client = new HttpClient($this->apiUrl);
+
+        try {
+            $response = $client->postRequest($request, HttpClient::CONTENT_TYPE_JSON, true);
+
+            if ($response['status'] !== 'success') {
+                throw new DnsServiceException('Fetch "InfoDnsRecords" Request not successfully', $response);
+            }
+        } catch (DnsServiceException $e) {
+            Log::error($e->getMessage() . ' => ' . $response['longmessage'], $this::class);
+            return null;
+        } catch (HttpClientException $e) {
+            Log::Error($e->getMessage(), $this::class);
+            return null;
+        }
+
+        $domain = (new Domain)->setDomain($response['responsedata']['name']);
+
+        return (new DomainZone())->setDomain($domain)
+            ->setTtl($response['responsedata']['ttl'])
+            ->setRefresh($response['responsedata']['refresh'])
+            ->setRawData($response['responsedata']);
     }
 
-    public function getDomainInformation(Domain $domain): array
+    /**
+     * @return DnsRecord[]
+     * @throws HttpClientException
+     * @throws DnsServiceException
+     */
+    public function fetchInfoDnsRecords(Domain $domain): array
     {
-        // TODO: Implement getDomainInformation() method.
+        $request = [
+            'action' => 'infoDnsRecords',
+            'param' => [
+                'domainname' => $domain->getDomain(),
+                'customernumber' => $this->customerNr,
+                'apikey' => $this->apiKey,
+                'apisessionid' => $this->apiSession
+            ]
+        ];
+
+        $client = new HttpClient($this->apiUrl);
+
+        try {
+            $response = $client->postRequest($request, HttpClient::CONTENT_TYPE_JSON, true);
+
+            if ($response['status'] !== 'success') {
+                throw new DnsServiceException('Fetch "InfoDnsRecords" Request not successfully', $response);
+            }
+        } catch (DnsServiceException $e) {
+            Log::error($e->getMessage() . ' => ' . $response['longmessage'], $this::class);
+            throw $e;
+        } catch (HttpClientException $e) {
+            Log::Error($e->getMessage(), $this::class);
+            throw $e;
+        }
+
+        $records = [];
+        foreach ($response['responsedata']['dnsrecords'] as $recordData) {
+            $newRecord = (new DnsRecord)
+                ->setId($recordData['id'])
+                ->setSubDomain($recordData['hostname'])
+                ->setDomain($domain->getDomain())
+                ->setType(DnsType::from($recordData['type']))
+                ->setDelete($recordData['deleterecord'])
+                ->setRawData($recordData);
+
+            switch ($newRecord->getType()) {
+                case DnsType::A:
+                    $newRecord->setIp(
+                        (new IPv4Builder())->setAddress($recordData['destination'])->build()
+                    );
+                    break;
+                case DnsType::AAAA:
+                    $newRecord->setIp(
+                        (new IPv6Builder())->setAddress($recordData['destination'])->build()
+                    );
+                    break;
+                default:
+                    break;
+            }
+            $records[] = $newRecord;
+        }
+
+        return $records;
     }
 
-    public function setDomainInformation(DomainRecord $domainRecord): bool
+    /**
+     * @throws DnsServiceException
+     * @throws HttpClientException
+     */
+    public function pushUpdateDnsZone(DomainZone $zone): void
     {
-        $test1 = $this->login();
-        $zone = $this->getZoneInformation($domainRecord->getDomain());
-        $test2 = $this->logout();
+        $request = [
+            'action' => 'updateDnsZone',
+            'param' => [
+                'domainname' => $zone->getDomain()->getDomain(),
+                'customernumber' => $this->customerNr,
+                'apikey' => $this->apiKey,
+                'apisessionid' => $this->apiSession,
+                'dnszone' => [
+                    'name' => $zone->getDomain()->getDomain(),
+                    'ttl' => $zone->getTtl(),
+                    'refresh' => $zone->getRefresh(),
+                    'retry' => $zone->getRawData()['retry'] ?? '',
+                    'expire' => $zone->getRawData()['expire'] ?? '',
+                    'dnssecstatus' => $zone->getRawData()['dnssecstatus'] ?? false,
+                ],
+            ]
+        ];
 
-        $test3 = "";
+        $client = new HttpClient($this->apiUrl);
+
+        try {
+            $response = $client->postRequest($request, HttpClient::CONTENT_TYPE_JSON, true);
+
+            if ($response['status'] !== 'success') {
+                throw new DnsServiceException('Push "updateDnsZone" Request not successfully', $response);
+            }
+
+            Log::success('Zone Update for "' . $zone->getDomain()->getDomainname() . '" successfully pushed!', $this::class);
+        } catch (DnsServiceException $e) {
+            Log::error($e->getMessage() . ' => ' . $response['longmessage'], $this::class);
+            throw $e;
+        } catch (HttpClientException $e) {
+            Log::Error($e->getMessage(), $this::class);
+            throw $e;
+        }
+    }
+
+    /**
+     * @throws DnsServiceException
+     * @throws HttpClientException
+     */
+    public function pushUpdateDnsRecords(DomainZone $zone): void
+    {
+        $request = [
+            'action' => 'updateDnsRecords',
+            'param' => [
+                'domainname' => $zone->getDomain()->getDomain(),
+                'customernumber' => $this->customerNr,
+                'apikey' => $this->apiKey,
+                'apisessionid' => $this->apiSession,
+                'dnsrecordset' => [
+                    'dnsrecords' => [],
+                ],
+            ]
+        ];
+
+        foreach ($zone->getRecords() as $record) {
+            $raw = [
+                'id' => (string) $record->getId(),
+                'hostname' => $record->getSubDomain(),
+                'type' => $record->getType()->value ?? $record->getRawData()['type'],
+                'priority' => $record->getRawData()['priority'] ?? '0',
+                'destination' => $record->getIp()?->getAddress() ?? $record->getRawData()['destination'] ?? '',
+                'deleterecord' => $record->isDelete(),
+                'state' => $record->getRawData()['state'] ?? 'yes',
+            ];
+
+            $request['param']['dnsrecordset']['dnsrecords'][] = $raw;
+        }
+
+        $client = new HttpClient($this->apiUrl);
+
+        try {
+            $response = $client->postRequest($request, HttpClient::CONTENT_TYPE_JSON, true);
+
+            if ($response['status'] !== 'success') {
+                throw new DnsServiceException('Push "updateDnsRecords" Request not successfully', $response);
+            }
+
+            Log::success('Records Update for "' . $zone->getDomain()->getDomainname() . '" successfully pushed!', $this::class);
+        } catch (DnsServiceException $e) {
+            Log::error($e->getMessage() . ' => ' . $response['longmessage'], $this::class);
+            throw $e;
+        } catch (HttpClientException $e) {
+            Log::Error($e->getMessage(), $this::class);
+            throw $e;
+        }
     }
 }

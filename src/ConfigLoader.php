@@ -6,18 +6,14 @@ use Acme\Builder\DnsServiceBuilder;
 use Acme\Builder\IpDetectorBuilder;
 use Acme\Builder\IPv4Builder;
 use Acme\Builder\IPv6Builder;
+use Acme\Entities\DnsRecord;
+use Acme\Entities\DomainZone;
 use Acme\Exception\ConfigException;
 use Acme\Exception\RecordNotFoundException;
 use Acme\Network\Domain;
-use Acme\Network\IPv6;
+use Acme\Network\DomainConfig;
 use Modules\DnsService\DnsService;
-use Modules\DnsService\DynDnsService;
-use Modules\DnsService\IPv64Service;
-use Modules\DnsService\NetcupService;
-use Modules\IpDetector\GenericDetector;
 use Modules\IpDetector\IpDetector;
-use Modules\IpDetector\AvmDetector;
-use Modules\IpDetector\ApiDetector;
 use SoapFault;
 
 class ConfigLoader
@@ -38,7 +34,7 @@ class ConfigLoader
     }
 
     /**
-     * @return Domain[]
+     * @return DomainConfig[]
      * @throws ConfigException*/
     public static function loadDomains(array $rawDomains): array
     {
@@ -47,14 +43,15 @@ class ConfigLoader
         foreach ($rawDomains as $domain) {
             foreach ($domain->Subdomains as $subdomain) {
                 try {
-                    $domainObj = new Domain(
-                        $subdomain->Subdomain,
-                        $domain->Domain,
-                        $domain->Module
-                    );
+                    $dnsRecord = new DnsRecord();
+                    $dnsRecord->setSubDomain($subdomain->Subdomain)
+                        ->setDomain($domain->Domain);
+
+                    $domainConfigObj = (new DomainConfig)->setDnsRecord($dnsRecord)
+                        ->setModule($domain->Module);
 
                     if (isset($subdomain->IPv6)) {
-                        $domainObj->setStaticIpv6Identifier(
+                        $domainConfigObj->setStaticIpv6Identifier(
                             IPv6Builder::create()
                                 ->setInterfaceIdentifier($subdomain->IPv6)
                                 ->build()
@@ -62,16 +59,16 @@ class ConfigLoader
                     }
 
                     if (isset($subdomain->IPv4)) {
-                        $domainObj->setStaticIpv4(
+                        $domainConfigObj->setStaticIpv4(
                             IPv4Builder::create()
                                 ->setAddress($subdomain->IPv4)
                                 ->build()
                         );
                     }
 
-                    $domainObj->getPublicRecords();
+                    $domainConfigObj->getPublicRecords();
 
-                    $domains[$domain->Domain][$subdomain->Subdomain] = $domainObj;
+                    $domains[$domain->Domain][$subdomain->Subdomain] = $domainConfigObj;
                 } catch (RecordNotFoundException $e) {
                     Log::error($e->getMessage(), self::class);
                 }
@@ -91,28 +88,29 @@ class ConfigLoader
      */
     public static function loadDnsServices(array $rawModules): array
     {
-        $modules = [];
+        $dnsServices = [];
 
         foreach ($rawModules as $module) {
-            $modules[$module->Name] = self::createDnsServiceBuilder()
-                ->setUpdateUrl($module->UpdateUrl ?? '')
-                ->setUpdateKey($module->UpdateKey ?? '')
-                ->setApiUrl($module->ApiUrl ?? '')
-                ->setApiKey($module->ApiKey ?? '')
-                ->setUsername($module->Username ?? '')
-                ->setPassword($module->Password ?? '')
+            $dnsServices[$module->Name] = self::createDnsServiceBuilder()
+                ->setUpdateUrl($module->UpdateUrl ?? null)
+                ->setUpdateKey($module->UpdateKey ?? null)
+                ->setApiUrl($module->ApiUrl ?? null)
+                ->setApiKey($module->ApiKey ?? null)
+                ->setUsername($module->Username ?? null)
+                ->setPassword($module->Password ?? null)
                 ->setUpdatePrefix($module->NetworkPrefix ?? false)
                 ->build($module->Service);
 
-            Log::info('Initialized DnsService Module. Ready!', $modules[$module->Name]::class);
+            Log::info('Initialized DnsService Module. Ready!', $dnsServices[$module->Name]::class);
         }
 
-        if(count($modules) == 0) {
+        if(count($dnsServices) == 0) {
             throw new ConfigException('No active DnsService Modules found!');
         }
 
-        return $modules;
+        return $dnsServices;
     }
+
 
     private static function createIpDetectorBuilder(): IpDetectorBuilder
     {
