@@ -90,6 +90,7 @@ try {
                     ->setSubDomain($domainConfig->getDnsRecord()->getSubDomain())
                     ->setDomain($domainConfig->getDnsRecord()->getDomain())
                     ->setType(DnsType::AAAA);
+
                 $ipv6Builder = new IPv6Builder();
                 $ipv6Builder->setAddress(LOCAL_IPv6->getAddress())
                     ->setNetworkPrefix(LOCAL_IPv6->getNetworkPrefix())
@@ -112,39 +113,42 @@ try {
                 }
             }
 
+            LOGGER->info('DOMAIN "' . $domainConfig->getDnsRecord()->getDnsRecordname() . '": Update DynDNS Record ...', $module::class);
+            // Update DomainConfig DNS-Entry IPv4
+            if (USE_IPv4 && $domainConfig->isUpdateNeeded($newIpv4DnsRecord->getIp())) {
+                $cachedIpv4DnsRecord = CACHE?->loadDnsRecord($newIpv4DnsRecord);
 
-            // Update DomainConfig DNS-Entry
-            if ((USE_IPv4 && $domainConfig->isUpdateNeeded($newIpv4DnsRecord->getIp())) || (USE_IPv6 && $domainConfig->isUpdateNeeded($newIpv6DnsRecord->getIp()))) {
-                LOGGER->info('DOMAIN "' . $domainConfig->getDnsRecord()->getDnsRecordname() . '": Update DynDNS Entry ...', $module::class);
-
-                $cachedIpv4DnsRecord = USE_IPv4 ? CACHE?->loadDnsRecord($newIpv4DnsRecord) : null;
-                $cachedIpv6DnsRecord = USE_IPv4 ? CACHE?->loadDnsRecord($newIpv6DnsRecord) : null;
-
-                try {
-                    if (USE_IPv4 && ($cachedIpv4DnsRecord === null || $cachedIpv4DnsRecord->getIp()->getAddress() !== $newIpv4DnsRecord->getIp()->getAddress())) {
-                        LOGGER->change($domainConfig->getDnsRecord(), $module, $domainConfig->getIpv4(), $newIpv4DnsRecord->getIp());
+                if ($cachedIpv4DnsRecord === null || $cachedIpv4DnsRecord->getIp()->getAddress() !== $newIpv4DnsRecord->getIp()->getAddress()) {
+                    try {
                         $module->updateDnsRecord($newIpv4DnsRecord);
-                    } else if (USE_IPv4) {
-                        LOGGER->info('DOMAIN "' . $domainConfig->getDnsRecord()->getDnsRecordname() . ': IPv4 DynDNS Entry no Update needed (Cached)');
+                        LOGGER->change($domainConfig->getDnsRecord(), $module, $domainConfig->getIpv4(), $newIpv4DnsRecord->getIp());
+                    } catch (\Exception $e) {
+                        LOGGER->warning('DOMAIN "' . $domainConfig->getDnsRecord()->getDnsRecordname() . '": DynDNS IPv4 Record could not be updated', $module::class);
                     }
-
-                    if (USE_IPv6 && ($cachedIpv6DnsRecord === null || $cachedIpv6DnsRecord->getIp()->getAddress() !== $newIpv6DnsRecord->getIp()->getAddress())) {
-                        LOGGER->change($domainConfig->getDnsRecord(), $module, $domainConfig->getIpv6(), $newIpv6DnsRecord->getIp());
-                        $module->updateDnsRecord($newIpv6DnsRecord);
-                    } else if (USE_IPv6) {
-                        LOGGER->info('DOMAIN "' . $domainConfig->getDnsRecord()->getDnsRecordname() . ': IPv6 DynDNS Entry no Update needed (Cached)');
-                    }
-
-                    LOGGER->success('DOMAIN "' . $domainConfig->getDnsRecord()->getDnsRecordname() . '": DynDNS Entry successfully updated', $module::class);
-                } catch (Exception $e) {
-                    LOGGER->warning('DOMAIN "' . $domainConfig->getDnsRecord()->getDnsRecordname() . '": DynDNS Entry could not be updated', $module::class);
+                } else {
+                    LOGGER->info('DOMAIN "' . $domainConfig->getDnsRecord()->getDnsRecordname() . ': DynDNS IPv4 Record no Update needed (Cached)');
                 }
-            } else {
-                LOGGER->info('DOMAIN "' . $domainConfig->getDnsRecord()->getDnsRecordname() . '": DynDNS Entry no Update needed', $module::class);
+            }
+
+            // Update DomainConfig DNS-Entry IPv6
+            if (USE_IPv6 && $domainConfig->isUpdateNeeded($newIpv6DnsRecord->getIp())) {
+                $cachedIpv6DnsRecord = CACHE?->loadDnsRecord($newIpv6DnsRecord);
+
+                if ($cachedIpv6DnsRecord === null || $cachedIpv6DnsRecord->getIp()->getAddress() !== $newIpv6DnsRecord->getIp()->getAddress()) {
+                    try {
+                        $module->updateDnsRecord($newIpv6DnsRecord);
+                        LOGGER->change($domainConfig->getDnsRecord(), $module, $domainConfig->getIpv6(), $newIpv6DnsRecord->getIp());
+                    } catch (\Exception $e) {
+                        LOGGER->warning('DOMAIN "' . $domainConfig->getDnsRecord()->getDnsRecordname() . '": DynDNS IPv6 Record could not be updated', $module::class);
+                    }
+                } else {
+                    LOGGER->info('DOMAIN "' . $domainConfig->getDnsRecord()->getDnsRecordname() . ': DynDNS IPv6 Record no Update needed (Cached)');
+                }
             }
         }
     }
 
+    // For all Modules Push DnsRecords in Change/Create/Delete Query
     foreach (MODULES as $dnsService) {
         try {
             $dnsService->push();
