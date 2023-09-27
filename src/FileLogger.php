@@ -6,7 +6,7 @@ use Src\Exception\FileException;
 
 class FileLogger
 {
-    final const DEFAULT_BASEPATH = 'var\logs';
+    final const DEFAULT_BASEPATH = 'var/logs';
     
     private string $basePath;
     private LoggerLevel $level;

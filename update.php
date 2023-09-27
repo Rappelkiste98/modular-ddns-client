@@ -161,5 +161,6 @@ try {
 } catch (SoapFault | ConfigException $e) {
     LOGGER->error($e::class . ' -> ' . $e->getMessage());
 } catch (\Exception $e) {
-    LOGGER->error($e->getMessage());
+    echo $e->getMessage();
+    //LOGGER->error($e->getMessage());
 }
