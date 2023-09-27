@@ -43,20 +43,20 @@ class FileLogger
     private function createMonthDirectory(): string
     {
         $today = new \DateTime('today');
-        $monthPath = $this->basePath . '\\' . $today->format('Y-m');
+        $monthPath = $this->basePath . '/' . $today->format('Y-m');
 
         if (!file_exists($this->basePath)) {
             throw new FileException('Logs base Path "' . $this->basePath . '" not exists');
         }
 
         if (file_exists($monthPath)) {
-            return $monthPath . '\\' . $today->format('Y-m-d') . '.log';
+            return $monthPath . '/' . $today->format('Y-m-d') . '.log';
         }
 
         if (!mkdir($monthPath, 0777, true)) {
             throw new FileException('Could not create Log Folder');
         }
 
-        return $monthPath . '\\' . $today->format('Y-m-d') . '.log';
+        return $monthPath . '/' . $today->format('Y-m-d') . '.log';
     }
 }
