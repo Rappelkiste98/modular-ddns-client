@@ -67,7 +67,7 @@ try {
             $newIpv6DnsRecord = null;
 
             if ($module === null) {
-                LOGGER->error('DnsService Module with Name "' . $domainConfig->getModule() . '" not found! Skip.');
+                LOGGER->error(sprintf('DnsService Module with Name "%s" not found! Skip.', $domainConfig->getModule()));
                 continue;
             }
 
@@ -123,10 +123,10 @@ try {
                         $module->updateDnsRecord($newIpv4DnsRecord);
                         LOGGER->change($domainConfig->getDnsRecord(), $module, $domainConfig->getIpv4(), $newIpv4DnsRecord->getIp());
                     } catch (\Exception $e) {
-                        LOGGER->warning('DOMAIN "' . $domainConfig->getDnsRecord()->getDnsRecordname() . '": DynDNS IPv4 Record could not be updated', $module::class);
+                        LOGGER->warning(sprintf('DOMAIN "%s": DynDNS IPv4 Record could not be updated (%s)', $domainConfig->getDnsRecord()->getDnsRecordname(), $e->getMessage()), $module::class);
                     }
                 } else {
-                    LOGGER->info('DOMAIN "' . $domainConfig->getDnsRecord()->getDnsRecordname() . ': DynDNS IPv4 Record no Update needed (Cached)');
+                    LOGGER->info(sprintf('DOMAIN "%s": DynDNS IPv4 Record no Update needed (Cached)', $domainConfig->getDnsRecord()->getDnsRecordname()));
                 }
             }
 
@@ -139,10 +139,10 @@ try {
                         $module->updateDnsRecord($newIpv6DnsRecord);
                         LOGGER->change($domainConfig->getDnsRecord(), $module, $domainConfig->getIpv6(), $newIpv6DnsRecord->getIp());
                     } catch (\Exception $e) {
-                        LOGGER->warning('DOMAIN "' . $domainConfig->getDnsRecord()->getDnsRecordname() . '": DynDNS IPv6 Record could not be updated', $module::class);
+                        LOGGER->warning(sprintf('DOMAIN "%s": DynDNS IPv6 Record could not be updated (%s)', $domainConfig->getDnsRecord()->getDnsRecordname(), $e->getMessage()), $module::class);
                     }
                 } else {
-                    LOGGER->info('DOMAIN "' . $domainConfig->getDnsRecord()->getDnsRecordname() . ': DynDNS IPv6 Record no Update needed (Cached)');
+                    LOGGER->info(sprintf('DOMAIN "%s": DynDNS IPv6 Record no Update needed (Cached)', $domainConfig->getDnsRecord()->getDnsRecordname()));
                 }
             }
         }
@@ -159,8 +159,7 @@ try {
 
     LOGGER->success('DynDNS Client successfully');
 } catch (SoapFault | ConfigException $e) {
-    LOGGER->error($e::class . ' -> ' . $e->getMessage());
+    LOGGER->error(sprintf('Error while Config initialization (%s)', $e->getMessage()));
 } catch (\Exception $e) {
-    echo $e->getMessage() . "\n";
-    //LOGGER->error($e->getMessage());
+    echo sprintf("Exception: %s -> %s\n", $e::class, $e->getMessage());
 }

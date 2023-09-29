@@ -9,6 +9,7 @@ use Src\Entities\DnsRecord;
 use Src\Entities\DomainZone;
 use Src\Exception\DnsServiceException;
 use Src\Exception\HttpClientException;
+use Src\Exception\RecordAnomalyException;
 use Src\Logger;
 use Src\Network\DnsType;
 use Src\Network\Domain;
@@ -56,7 +57,7 @@ class NetcupService extends DnsService
      */
     public function getDomainZone(Domain $domain): DomainZone|null
     {
-        if (count($this->domainZones) == 0) {
+        if (!isset($this->domainZones[$domain->getDomainname()])) {
             $this->domainZones[$domain->getDomainname()] = $this->fetchInfoDnsZone($domain);
         }
 
@@ -69,6 +70,7 @@ class NetcupService extends DnsService
      *
      * @throws HttpClientException
      * @throws DnsServiceException
+     * @throws RecordAnomalyException
      */
     public function updateDnsRecord(DnsRecord $record): void
     {
@@ -226,10 +228,15 @@ class NetcupService extends DnsService
 
         $domain = (new Domain)->setDomain($response['responsedata']['name']);
 
-        return (new DomainZone())->setDomain($domain)
+        $zone = (new DomainZone())->setDomain($domain)
             ->setTtl($response['responsedata']['ttl'])
             ->setRefresh($response['responsedata']['refresh'])
             ->setRawData($response['responsedata']);
+
+        $zoneRecords = $this->fetchInfoDnsRecords($zone);
+        $zone->setRecords($zoneRecords);
+
+        return $zone;
     }
 
     /**
@@ -237,12 +244,16 @@ class NetcupService extends DnsService
      * @throws HttpClientException
      * @throws DnsServiceException
      */
-    public function fetchInfoDnsRecords(Domain $domain): array
+    public function fetchInfoDnsRecords(DomainZone $zone): array
     {
+        if (!$this->initialized || $this->apiSession === null) {
+            throw new DnsServiceException('Netcup Service failed initialization');
+        }
+
         $request = [
             'action' => 'infoDnsRecords',
             'param' => [
-                'domainname' => $domain->getDomain(),
+                'domainname' => $zone->getDomain()->getDomain(),
                 'customernumber' => $this->customerNr,
                 'apikey' => $this->apiKey,
                 'apisessionid' => $this->apiSession
@@ -270,7 +281,7 @@ class NetcupService extends DnsService
             $newRecord = (new DnsRecord)
                 ->setId($recordData['id'])
                 ->setSubDomain($recordData['hostname'])
-                ->setDomain($domain->getDomain())
+                ->setDomain($zone->getDomain()->getDomain())
                 ->setType(DnsType::from($recordData['type']))
                 ->setDelete($recordData['deleterecord'])
                 ->setRawData($recordData);
@@ -301,6 +312,10 @@ class NetcupService extends DnsService
      */
     public function pushUpdateDnsZone(DomainZone $zone): void
     {
+        if (!$this->initialized || $this->apiSession === null) {
+            throw new DnsServiceException('Netcup Service failed initialization');
+        }
+
         $request = [
             'action' => 'updateDnsZone',
             'param' => [
@@ -344,6 +359,10 @@ class NetcupService extends DnsService
      */
     public function pushUpdateDnsRecords(DomainZone $zone): void
     {
+        if (!$this->initialized || $this->apiSession === null) {
+            throw new DnsServiceException('Netcup Service failed initialization');
+        }
+
         $request = [
             'action' => 'updateDnsRecords',
             'param' => [

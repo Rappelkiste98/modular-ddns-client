@@ -5,6 +5,7 @@ namespace Modules\DnsService;
 use Src\Entities\DnsRecord;
 use Src\Entities\DomainZone;
 use Src\Exception\DnsServiceException;
+use Src\Exception\RecordAnomalyException;
 use Src\Network\DnsType;
 use Src\Network\Domain;
 
@@ -36,16 +37,18 @@ abstract class DnsService
         return $this->domainZones;
     }
 
+    /**
+     * @throws RecordAnomalyException
+     */
     protected function findDnsRecord(DnsRecord $record): ?DnsRecord
     {
         foreach ($this->domainZones as $zone) {
-            foreach ($zone->getRecords() as $zoneRecord) {
-                if ($zoneRecord->getDnsRecordname() === $record->getDnsRecordname()
-                    && $zoneRecord->getType() === $record->getType()
-                    && $zoneRecord->getIp()::class === $record->getIp()::class
-                ) {
-                    return $zoneRecord;
-                }
+            $findRecords = array_filter($zone->getRecords(), fn($zoneRecord) => $zoneRecord->getDnsRecordname() === $record->getDnsRecordname()
+                && $zoneRecord->getType() === $record->getType()
+                && $zoneRecord->getIp()::class === $record->getIp()::class );
+
+            if (count($findRecords) > 1) {
+                throw new RecordAnomalyException('Found ' . count($findRecords) . ' Records for "' . $record->getDnsRecordname() . '" (' . $record->getIp()::class . ')');
             }
         }
 

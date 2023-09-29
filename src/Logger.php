@@ -79,7 +79,7 @@ class Logger
         $oldIp = !is_null($oldIp) ? $oldIp->getAddress() : '';
         $newIp = $newIp->getAddress();
 
-        $message = 'DOMAIN "' . $domain->getDnsRecordname() . '": ' . $oldIp . ' ==> ' . $newIp;
+        $message = sprintf('DOMAIN "%s": %s ==> %s', $domain->getDnsRecordname(), $oldIp, $newIp);
         $logMessage = self::buildMessage('0;36', $message, LoggerLevel::CHANGE, $dnsModule::class);
 
         if($this->level->inLevel(LoggerLevel::CHANGE)) {
@@ -106,6 +106,6 @@ class Logger
 
         FILE_LOGGER?->writeLog($logMessage, $level);
 
-        return "\e[". $color . "m" . $logMessage . "\n\e[0m";
+        return "\e[{$color}m{$logMessage}\n\e[0m";
     }
 }

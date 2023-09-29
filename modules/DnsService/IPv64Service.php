@@ -9,6 +9,7 @@ use Src\Entities\DnsRecord;
 use Src\Entities\DomainZone;
 use Src\Exception\DnsServiceException;
 use Src\Exception\HttpClientException;
+use Src\Exception\RecordAnomalyException;
 use Src\Logger;
 use Src\Network\DnsType;
 use Src\Network\Domain;
@@ -55,6 +56,7 @@ class IPv64Service extends DnsService
      *
      * @throws HttpClientException
      * @throws DnsServiceException
+     * @throws RecordAnomalyException
      */
     public function updateDnsRecord(DnsRecord $record): void
     {
