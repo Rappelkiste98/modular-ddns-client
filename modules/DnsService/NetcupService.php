@@ -284,9 +284,14 @@ class NetcupService extends DnsService
                 ->setId($recordData['id'])
                 ->setSubDomain($recordData['hostname'])
                 ->setDomain($zone->getDomain()->getDomain())
-                ->setType(DnsType::from($recordData['type']))
                 ->setDelete($recordData['deleterecord'])
                 ->setRawData($recordData);
+
+            try {
+                $newRecord->setType(DnsType::from($recordData['type']));
+            } catch (\ValueError $valueError) {
+                LOGGER->error($valueError->getMessage(), $this::class);
+            }
 
             switch ($newRecord->getType()) {
                 case DnsType::A:
