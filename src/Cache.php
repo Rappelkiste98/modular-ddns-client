@@ -50,6 +50,12 @@ class Cache
             $cacheRecord->setIp($record->getIp())
                 ->setLastUpdate($record->getLastUpdate());
         }
+
+        try {
+            $this->createCacheFile();
+        } catch (CacheException $e) {
+            LOGGER->error($e->getMessage(), $this::class);
+        }
     }
 
     public function loadDnsRecord(DnsRecord $record): ?DnsRecord
