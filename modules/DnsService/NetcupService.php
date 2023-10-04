@@ -81,12 +81,14 @@ class NetcupService extends DnsService
             throw new DnsServiceException('DomainZone "' . $domain->getDomainname() . '" not found! Skip');
         }
 
+        $record->setLastUpdate(new \DateTime('now'));
         $zoneRecord = $this->findDnsRecord($record);
         if ($zoneRecord === null) {
             $record->setCreate();
             $zone->addRecord($record);
         } else if ($zoneRecord->getIp()->getAddress() !== $record->getIp()->getAddress()) {
             $zoneRecord->setIp($record->getIp())
+                ->setLastUpdate($record->getLastUpdate())
                 ->setUpdate();
         }
     }

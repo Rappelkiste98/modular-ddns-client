@@ -43,6 +43,8 @@ class DomainConfig
                     break;
             }
         }
+
+        LOGGER->debug(sprintf('Current Records for "%s" IPv4: %s | IPv6: %s', $this->getDnsRecord()->getDnsRecordname(), $this->getIpv4()?->getAddress(), $this->getIpv6()?->getAddress()), $this::class);
     }
 
     public function isUpdateNeeded(IPv4|IPv6|null $checkIp): bool

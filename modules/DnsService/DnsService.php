@@ -49,6 +49,8 @@ abstract class DnsService
 
             if (count($findRecords) > 1) {
                 throw new RecordAnomalyException('Found ' . count($findRecords) . ' Records for "' . $record->getDnsRecordname() . '" (' . $record->getIp()::class . ')');
+            } else if (count($findRecords) === 1) {
+                return current($findRecords);
             }
         }
 

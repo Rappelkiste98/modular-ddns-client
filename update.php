@@ -126,7 +126,7 @@ try {
                         LOGGER->warning(sprintf('DOMAIN "%s": DynDNS IPv4 Record could not be updated (%s)', $domainConfig->getDnsRecord()->getDnsRecordname(), $e->getMessage()), $module::class);
                     }
                 } else {
-                    LOGGER->info(sprintf('DOMAIN "%s": DynDNS IPv4 Record no Update needed (Cached)', $domainConfig->getDnsRecord()->getDnsRecordname()));
+                    LOGGER->info(sprintf('DOMAIN "%s": DynDNS IPv4 Record no Update needed (Cached [%s])', $domainConfig->getDnsRecord()->getDnsRecordname(), $cachedIpv4DnsRecord->getIp()->getAddress()));
                 }
             }
 
@@ -142,7 +142,7 @@ try {
                         LOGGER->warning(sprintf('DOMAIN "%s": DynDNS IPv6 Record could not be updated (%s)', $domainConfig->getDnsRecord()->getDnsRecordname(), $e->getMessage()), $module::class);
                     }
                 } else {
-                    LOGGER->info(sprintf('DOMAIN "%s": DynDNS IPv6 Record no Update needed (Cached)', $domainConfig->getDnsRecord()->getDnsRecordname()));
+                    LOGGER->info(sprintf('DOMAIN "%s": DynDNS IPv6 Record no Update needed (Cached [%s])', $domainConfig->getDnsRecord()->getDnsRecordname(), $cachedIpv6DnsRecord->getIp()->getAddress()));
                 }
             }
         }

@@ -61,14 +61,20 @@ class IPv64Service extends DnsService
     public function updateDnsRecord(DnsRecord $record): void
     {
         $domain = (new Domain())->setDomain($record->getDomain());
-        $zone = $this->getDomainZone($domain) ?? (new DomainZone)->setDomain($domain)->setCreate();
+        $zone = $this->getDomainZone($domain);
 
+        if ($zone === null) {
+            throw new DnsServiceException('DomainZone "' . $domain->getDomainname() . '" not found! Skip');
+        }
+
+        $record->setLastUpdate(new \DateTime('now'));
         $zoneRecord = $this->findDnsRecord($record);
         if ($zoneRecord === null) {
             $record->setCreate();
             $zone->addRecord($record);
         } else if ($zoneRecord->getIp()->getAddress() !== $record->getIp()->getAddress()) {
             $zoneRecord->setIp($record->getIp())
+                ->setLastUpdate($record->getLastUpdate())
                 ->setUpdate();
         }
     }

@@ -8,4 +8,5 @@ enum DnsType: string
     case AAAA = 'AAAA';
     case CNAME = 'CNAME';
     case MX = 'MX';
+    case TXT = 'TXT';
 }

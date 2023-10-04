@@ -36,6 +36,7 @@ class DynDnsService extends DnsService
         $domain = (new Domain())->setDomain($record->getDomain());
         $zone = $this->getDomainZone($domain) ?? (new DomainZone)->setDomain($domain);
 
+        $record->setLastUpdate(new \DateTime('now'));
         $record->setUpdate();
         $zone->addRecord($record);
 

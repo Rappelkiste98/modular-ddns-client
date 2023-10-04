@@ -47,7 +47,8 @@ class Cache
         if ($cacheRecord === null) {
             $this->cache[] = $record;
         } else {
-            $cacheRecord->setIp($record->getIp());
+            $cacheRecord->setIp($record->getIp())
+                ->setLastUpdate($record->getLastUpdate());
         }
     }
 
@@ -80,6 +81,7 @@ class Cache
                 'type' => $record->getType()->value,
                 'ip' => $record->getIp()?->getAddress(),
                 'ipType' => $record->getIp()::class,
+                'lastUpdate' => $record->getLastUpdate()?->format('c'),
             ];
 
             $jsonCache[] = $jsonRecord;
@@ -127,7 +129,8 @@ class Cache
             $record = (new DnsRecord())
                 ->setSubDomain($rawRecord['subdomain'])
                 ->setDomain($rawRecord['domain'])
-                ->setType(DnsType::from($rawRecord['type']));
+                ->setType(DnsType::from($rawRecord['type']))
+                ->setLastUpdate(($rawRecord['lastUpdate'] ?? null) !== null ? \DateTime::createFromFormat('c', $rawRecord['lastUpdate']) : null);
 
             switch ($rawRecord['ipType']) {
                 case IPv4::class:
