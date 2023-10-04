@@ -34,7 +34,6 @@ class Cache
     {
         try {
             $this->createCacheFile();
-            LOGGER->debug('Cache "' . $this->path . '" successfully saved', $this::class);
         } catch (CacheException $e) {
             LOGGER->warning($e->getMessage(), $this::class);
         }
@@ -102,6 +101,7 @@ class Cache
                 throw new CacheException('Could not Write to Cache-File');
             }
 
+            LOGGER->debug(sprintf('Cache "%s" successfully saved', $this->path));
             fclose($cacheFile);
         }
     }
