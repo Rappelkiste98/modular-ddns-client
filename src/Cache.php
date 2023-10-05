@@ -2,6 +2,7 @@
 
 namespace Src;
 
+use DateTimeInterface;
 use Src\Builder\IPv4Builder;
 use Src\Builder\IPv6Builder;
 use Src\Exception\CacheException;
@@ -136,7 +137,7 @@ class Cache
                 ->setSubDomain($rawRecord['subdomain'])
                 ->setDomain($rawRecord['domain'])
                 ->setType(DnsType::from($rawRecord['type']))
-                ->setLastUpdate(($rawRecord['lastUpdate'] ?? null) !== null ? \DateTime::createFromFormat('c', $rawRecord['lastUpdate']) : null);
+                ->setLastUpdate(($rawRecord['lastUpdate'] ?? null) !== null ? \DateTime::createFromFormat(DateTimeInterface::ATOM, $rawRecord['lastUpdate']) : null);
 
             switch ($rawRecord['ipType']) {
                 case IPv4::class:
