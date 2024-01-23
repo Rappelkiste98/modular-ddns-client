@@ -2,12 +2,15 @@
   "require": {
     "ext-curl": "*",
     "ext-soap": "*",
-    "dallgoot/yaml": "0.9.1.1"
+    "dallgoot/yaml": "0.9.1.*"
   },
   "autoload": {
     "psr-4": {
       "Src\\": "src/",
       "Modules\\": "modules/"
     }
+  },
+  "scripts": {
+    "post-install-cmd": "php -r \"mkdir('var/logs', 0777, true);\""
   }
 }

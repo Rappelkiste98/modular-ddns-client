@@ -23,25 +23,23 @@ class DomainConfig
     public function getPublicRecords(): void
     {
         $domainname = $this->getDnsRecord()->buildDomain()->getDomainname();
-        $records = dns_get_record($domainname, DNS_ALL);
+        $recordIpv4 = dns_get_record($domainname, DNS_A);
+        $recordIpv6 = dns_get_record($domainname, DNS_AAAA);
 
-        if (!$records) {
+        if (!$recordIpv4 && !$recordIpv6) {
             throw new RecordNotFoundException('No DNS Record found for "' . $domainname . '"!');
         }
 
-        foreach ($records as $record) {
-            switch ($record['type']) {
-                case 'A':
-                    $this->ipv4 = IPv4Builder::create()
-                        ->setAddress($record['ip'])
-                        ->build();
-                    break;
-                case 'AAAA':
-                    $this->ipv6 = IPv6Builder::create()
-                        ->setAddress($record['ipv6'])
-                        ->build();
-                    break;
-            }
+        if ($recordIpv4) {
+            $this->ipv4 = IPv4Builder::create()
+                ->setAddress($recordIpv4[0]['ip'])
+                ->build();
+        }
+
+        if ($recordIpv6) {
+            $this->ipv6 = IPv6Builder::create()
+                ->setAddress($recordIpv6[0]['ipv6'])
+                ->build();
         }
 
         LOGGER->debug(sprintf('Current Records for "%s" IPv4: %s | IPv6: %s', $this->getDnsRecord()->getDnsRecordname(), $this->getIpv4()?->getAddress(), $this->getIpv6()?->getAddress()), $this::class);
