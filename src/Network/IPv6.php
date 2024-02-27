@@ -31,7 +31,7 @@ class IPv6
 
     public function setAddress(?string $address): self
     {
-        $this->address = $address;
+        $this->address = $this->trim($address);
         return $this;
     }
 
@@ -58,7 +58,7 @@ class IPv6
 
     public function setNetworkPrefix(?string $networkPrefix): self
     {
-        $this->networkPrefix = $networkPrefix;
+        $this->networkPrefix = $this->trim($networkPrefix);
         return $this;
     }
 
@@ -69,7 +69,7 @@ class IPv6
 
     public function setInterfaceIdentifier(?string $interfaceIdentifier): self
     {
-        $this->interfaceIdentifier = $interfaceIdentifier;
+        $this->interfaceIdentifier = $this->trim($interfaceIdentifier);
         return $this;
     }
 
@@ -93,5 +93,19 @@ class IPv6
     {
         $this->type = $type;
         return $this;
+    }
+
+    private function trim(?string $address): ?string
+    {
+        if ($address === null) {
+            return null;
+        }
+
+        $segmented = explode(':', $address);
+        foreach ($segmented as $key => $segment) {
+            $segmented[$key] = ltrim($segment, '0');
+        }
+
+        return implode(':', $segmented);
     }
 }
