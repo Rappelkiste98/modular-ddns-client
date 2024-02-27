@@ -9,6 +9,7 @@ use Src\Network\IPv6Type;
 class IPv6Builder
 {
     private ?string $address = null;
+    private ?string $subnetMask = null;
     private ?string $networkPrefix = null;
     private ?int $networkPrefixLength = null;
     private ?string $interfaceIdentifier = null;
@@ -22,6 +23,13 @@ class IPv6Builder
     public function setAddress(?string $address): self
     {
         $this->address = $address;
+
+        return $this;
+    }
+
+    public function setSubnetMask(?string $subnetMask): self
+    {
+        $this->subnetMask = $subnetMask;
 
         return $this;
     }
@@ -58,6 +66,7 @@ class IPv6Builder
     {
         $ip = new IPv6();
         $ip->setAddress($this->address);
+        $ip->setSubnetMask($this->subnetMask);
         $ip->setNetworkPrefix($this->networkPrefix);
         $ip->setInterfaceIdentifier($this->interfaceIdentifier);
         $ip->setNetworkPrefixLength($this->networkPrefixLength);
@@ -91,13 +100,35 @@ class IPv6Builder
         return $ip;
     }
 
+    public function buildByAddressAndSubnetMask(): IPv6
+    {
+        if ($this->address === null || $this->subnetMask === null) {
+            throw new BuildIPv6AddressException('IPv6 Build Failed! Requires Address & SubnetMask');
+        }
+
+        $expandedAddress = $this->expandIPv6($this->address);
+        $addressBin = $this->ipv62Binary($expandedAddress);
+        $subnetBin = $this->ipv62Binary($this->subnetMask);
+
+        $this->networkPrefixLength = strlen($subnetBin);
+        $networkBinArr = str_split($addressBin, $this->networkPrefixLength);
+        $this->networkPrefix = $this->binary2IPv6($networkBinArr[0]);
+
+        $ip = $this->build();
+        if (!$ip->validate()) {
+            throw new BuildIPv6AddressException('IPv6 Build Failed! Generated IPv6 Address is not valid!');
+        }
+
+        return $ip;
+    }
+
     /**
      * @throws BuildIPv6AddressException
      */
     public function buildByAddressAndPrefix(): IPv6
     {
         if ($this->address === null || $this->networkPrefixLength === null) {
-            throw new BuildIPv6AddressException('IPv6 Build Failed! Requires Address, Network-Prefix & Interface-Identifier');
+            throw new BuildIPv6AddressException('IPv6 Build Failed! Requires Address & Network-Prefix');
         }
 
         $expandedAddress = $this->expandIPv6($this->address);
@@ -105,6 +136,15 @@ class IPv6Builder
         $networkBinArr = str_split($addressBin, $this->networkPrefixLength);
 
         $this->networkPrefix = $this->binary2IPv6($networkBinArr[0]);
+
+        $subnetMaskBin = str_pad('', $this->networkPrefixLength, '1');
+
+        $segmentedSubnetMask = str_split($subnetMaskBin, 16);
+        $lastSegmentSubnetMask = str_pad(end($segmentedSubnetMask), 16, '0');
+        $segmentedSubnetMask[count($segmentedSubnetMask) - 1] = $lastSegmentSubnetMask;
+        $subnetMaskBinExpanded = implode('', $segmentedSubnetMask);
+
+        $this->subnetMask = count($segmentedSubnetMask) < 8 ? $this->binary2IPv6($subnetMaskBinExpanded) . '::' : $this->binary2IPv6($subnetMaskBinExpanded);
 
         $ip = $this->build();
         if (!$ip->validate()) {
@@ -144,9 +184,12 @@ class IPv6Builder
 
     private function binary2IPv6(string $binaryAddress): string
     {
-        $hexAddress = base_convert($binaryAddress, 2, 16);
-        $ipv6Address = '';
+        $hexAddress = '';
+        foreach (str_split($binaryAddress, 4) as $binaryChar) {
+            $hexAddress .= base_convert($binaryChar, 2, 16);
+        }
 
+        $ipv6Address = '';
         foreach (str_split($hexAddress, 4) as $segment) {
             $segment = str_pad($segment, 4, '0');
             $ipv6Address .= $segment . ':';

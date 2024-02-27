@@ -8,6 +8,7 @@ use Exception;
 class IPv6
 {
     private ?string $address = null;
+    private ?string $subnetMask = null;
     private ?string $networkPrefix = null;
     private ?int $networkPrefixLength = null;
     private ?string $interfaceIdentifier = null;
@@ -37,6 +38,17 @@ class IPv6
     public function getAddress(): ?string
     {
         return $this->address;
+    }
+
+    public function getSubnetMask(): ?string
+    {
+        return $this->subnetMask;
+    }
+
+    public function setSubnetMask(?string $subnetMask): self
+    {
+        $this->subnetMask = $subnetMask;
+        return $this;
     }
 
     public function getNetworkPrefix(): ?string

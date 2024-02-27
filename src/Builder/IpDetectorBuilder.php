@@ -13,6 +13,7 @@ class IpDetectorBuilder
 {
     private ?int $configPrefix = null;
     private string $routerAddress = '';
+    private string $nic = '';
 
     public function setConfigPrefix(int $prefix): self
     {
@@ -28,6 +29,13 @@ class IpDetectorBuilder
         return $this;
     }
 
+    public function setNIC(string $nic): self
+    {
+        $this->nic = $nic;
+
+        return $this;
+    }
+
     /**
      * @throws SoapFault
      * @throws ConfigException
@@ -37,7 +45,7 @@ class IpDetectorBuilder
         return match ($ipDetector) {
             ApiDetector::NAME => new ApiDetector($this->configPrefix),
             AvmDetector::NAME => new AvmDetector($this->configPrefix, $this->routerAddress),
-            GenericDetector::NAME => new GenericDetector($this->configPrefix),
+            GenericDetector::NAME => new GenericDetector($this->configPrefix, $this->nic),
             default => throw new ConfigException('IpDetector Module not found!'),
         };
     }

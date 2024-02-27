@@ -12,9 +12,9 @@ enum IPv6Type
     case Multicast;     // ff00::/8
     case GlobalUnicast; // 2000::/3
 
-    public static function getIPv6Type(IPv6 $ipv6): IPv6Type | bool
+    public static function getIPv6Type(IPv6|string $ipv6): IPv6Type | bool
     {
-        $segmentedIPv6 = explode(':', $ipv6->getAddress());
+        $segmentedIPv6 = explode(':', $ipv6 instanceof IPv6 ? $ipv6->getAddress() : $ipv6);
 
         if (count($segmentedIPv6) === 0) {
             return false;

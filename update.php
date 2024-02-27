@@ -17,6 +17,8 @@ use Src\FileLogger;
 
 require __DIR__ . '/vendor/autoload.php';
 
+define('DRY_RUN', array_search('--dry-run', $argv) !== false);
+
 try {
     $config = Yaml::parseFile(__DIR__ . '/config.yml', Loader::IGNORE_COMMENTS);
     define('LOGGER', new Logger(LoggerLevel::fromName($config->General->LoggerLevel)));
@@ -25,7 +27,7 @@ try {
 
     define('USE_IPv4', $config->Detector->IPv4 ?? false);
     define('USE_IPv6', $config->Detector->IPv6 ?? false);
-    define('IP_DETECTOR', ConfigLoader::loadIpDetector($config->Detector->Name, $config->Detector->IPv6PrefixLength ?? null, $config->Detector->URL ?? null));
+    define('IP_DETECTOR', ConfigLoader::loadIpDetector($config->Detector->Name, $config->Detector->IPv6PrefixLength ?? null, $config->Detector->URL ?? null, $config->Detector->NIC ?? null));
     define('MODULES', ConfigLoader::loadDnsServices($config->Modules));
     define('DOMAINS', ConfigLoader::loadDomains($config->Domains));
 
@@ -149,11 +151,13 @@ try {
     }
 
     // For all Modules Push DnsRecords in Change/Create/Delete Query
-    foreach (MODULES as $dnsService) {
-        try {
-            $dnsService->push();
-        } catch (\Exception $e) {
-            LOGGER->error($e->getMessage());
+    if (!DRY_RUN) {
+        foreach (MODULES as $dnsService) {
+            try {
+                $dnsService->push();
+            } catch (\Exception $e) {
+                LOGGER->error($e->getMessage());
+            }
         }
     }
 
