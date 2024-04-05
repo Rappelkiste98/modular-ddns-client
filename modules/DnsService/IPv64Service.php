@@ -48,7 +48,7 @@ class IPv64Service extends DnsService
             $this->domainZones = $this->fetchGetDomains();
         }
 
-        return $this->domainZones[$domain->getDomainname()] ?? null;
+        return $this->domainZones[$domain->getDomain()] ?? null;
     }
 
     /**
@@ -64,7 +64,7 @@ class IPv64Service extends DnsService
         $zone = $this->getDomainZone($domain);
 
         if ($zone === null) {
-            throw new DnsServiceException('DomainZone "' . $domain->getDomainname() . '" not found! Skip');
+            throw new DnsServiceException('DomainZone "' . $domain->getDomain() . '" not found! Skip');
         }
 
         $record->setLastUpdate(new \DateTime('now'));

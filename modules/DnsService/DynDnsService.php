@@ -7,6 +7,7 @@ use Src\Curl\HttpClient;
 use Src\Entities\DnsRecord;
 use Src\Entities\DomainZone;
 use Src\Exception\DnsServiceException;
+use Src\Exception\RecordAnomalyException;
 use Src\Logger;
 use Src\Network\DnsType;
 use Src\Network\Domain;
@@ -34,21 +35,25 @@ class DynDnsService extends DnsService
             $this->domainZones[] = $this->createDomainZoneByIpDetector($domain);
         }
 
-        return $this->domainZones[$domain->getDomainname()] ?? null;
+        return $this->domainZones[$domain->getDomain()] ?? null;
     }
 
     /**
      * Update DnsRecord Data and add to PushQuery
+     * @throws RecordAnomalyException
      * @throws Exception
      */
     public function updateDnsRecord(DnsRecord $record): void
     {
         $domain = (new Domain())->setDomain($record->getDomain())->setSubDomain($record->getSubDomain());
+        $zone = $this->getDomainZone($domain);
+
+        if ($zone === null) {
+            throw new DnsServiceException('DomainZone "' . $domain->getDomain() . '" not found! Skip');
+        }
 
         $record->setLastUpdate(new \DateTime('now'));
-        $zone = $this->getDomainZone($domain);
         $zoneRecord = $this->findDnsRecord($record);
-
         if ($zoneRecord === null) {
             $record->setCreate();
             $zone->addRecord($record);
@@ -133,7 +138,7 @@ class DynDnsService extends DnsService
      */
     public function createDomainZoneByIpDetector(Domain $domain): DomainZone
     {
-        $zone = (new DomainZone())->setDomain($domain);
+        $zone = (new DomainZone())->setDomain((new Domain())->setDomain($domain->getDomain()));
 
         $ipv4 = LOCAL_IPv4 ?? IP_DETECTOR->getExternalNetworkIPv4();
         if (!$ipv4->validate()) {
