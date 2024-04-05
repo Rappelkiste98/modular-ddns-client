@@ -57,11 +57,11 @@ class NetcupService extends DnsService
      */
     public function getDomainZone(Domain $domain): DomainZone|null
     {
-        if (!isset($this->domainZones[$domain->getDomainname()])) {
-            $this->domainZones[$domain->getDomainname()] = $this->fetchInfoDnsZone($domain);
+        if (!isset($this->domainZones[$domain->getDomain()])) {
+            $this->domainZones[$domain->getDomain()] = $this->fetchInfoDnsZone($domain);
         }
 
-        return $this->domainZones[$domain->getDomainname()] ?? null;
+        return $this->domainZones[$domain->getDomain()] ?? null;
     }
 
 
@@ -350,7 +350,7 @@ class NetcupService extends DnsService
                 throw new DnsServiceException('Push "updateDnsZone" Request not successfully', $response);
             }
 
-            LOGGER->success('Zone Update for "' . $zone->getDomain()->getDomainname() . '" successfully pushed!', $this::class);
+            LOGGER->success('Zone Update for "' . $zone->getDomain()->getDomain() . '" successfully pushed!', $this::class);
         } catch (DnsServiceException $e) {
             LOGGER->error($e->getMessage() . ' => ' . $response['longmessage'], $this::class);
             throw $e;
@@ -406,7 +406,7 @@ class NetcupService extends DnsService
                 throw new DnsServiceException('Push "updateDnsRecords" Request not successfully', $response);
             }
 
-            LOGGER->success('Records Update for "' . $zone->getDomain()->getDomainname() . '" successfully pushed!', $this::class);
+            LOGGER->success('Records Update for "' . $zone->getDomain()->getDomain() . '" successfully pushed!', $this::class);
         } catch (DnsServiceException $e) {
             LOGGER->error($e->getMessage() . ' => ' . $response['longmessage'], $this::class);
             throw $e;
