@@ -98,9 +98,13 @@ class IPv64Service extends DnsService
                     if ($record->getIp() instanceof IPv4) {
                         $recordIpv4 = $record;
                         $recordIpv6 = $this->findDnsRecordByDomainameAndIpClass($record->getDnsRecordname(), IPv6::class);
+                        $recordIpv6->setUpdate(false);
+                        $recordIpv6->setCreate(false);
                     } else {
                         $recordIpv6 = $record;
                         $recordIpv4 = $this->findDnsRecordByDomainameAndIpClass($record->getDnsRecordname(), IPv4::class);
+                        $recordIpv4->setUpdate(false);
+                        $recordIpv4->setCreate(false);
                     }
 
                     $this->execDDnsUpdate($recordIpv4, $recordIpv6);
