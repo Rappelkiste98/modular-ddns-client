@@ -22,12 +22,15 @@ class ConfigLoader
      * @throws SoapFault
      * @throws ConfigException
      */
-    public static function loadIpDetector(string $detector, ?int $configPrefixLength, ?string $detectorURL, ?string $nic): IpDetector
+    public static function loadIpDetector(string $detector, ?int $configPrefixLength, ?string $detectorURL, ?string $nic, ?string $ipv6Nic, ?string $username, ?string $password): IpDetector
     {
         $ipDetector = self::createIpDetectorBuilder()
             ->setRouterAddress($detectorURL ?? '')
             ->setConfigPrefix($configPrefixLength)
-            ->setNIC($nic ?? '')
+            ->setNic($nic ?? '')
+            ->setIpv6Nic($ipv6Nic)
+            ->setUsername($username ?? '')
+            ->setPassword($password ?? '')
             ->build($detector);
 
         LOGGER->info('Initialized IpDetector Module. Ready!', $ipDetector::class);

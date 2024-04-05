@@ -35,15 +35,15 @@ class GenericDetector extends IpDetector
     /**
      * @throws IpNotFoundException
      */
-    public function getExternalNetworkIPv4(): IPv4
+    public function getWanIPv4(): IPv4
     {
-        return $this->apiDetector->getExternalNetworkIPv4();
+        return $this->apiDetector->getWanIPv4();
     }
 
     /**
      * @throws IpNotFoundException
      */
-    public function getDeviceIPv4(): IPv4
+    public function getLanIPv4(): IPv4
     {
         $netInterfaces = net_get_interfaces();
 
@@ -79,7 +79,7 @@ class GenericDetector extends IpDetector
     /**
      * @throws IpNotFoundException
      */
-    public function getExternalIPv6(): IPv6
+    public function getWanIPv6(): IPv6
     {
         $netInterfaces = net_get_interfaces();
 

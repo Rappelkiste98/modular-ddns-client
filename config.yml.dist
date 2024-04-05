@@ -9,14 +9,20 @@ General:
   Cache: True
 
 Detector:
-  # Available default Detectors: "avm", "api", !!-> "generic" <- TEST ONLY, NOT STABLE!!
-  Name: "avm"
-  # URL from the local Entrypoint Router (Only important for the Detector "avm"!) (Optional)
-  URL:  "fritz.box"
+  # Available default Detectors: "avm", "api", "generic", "mikrotik"
+  Name: "api"
+  # URL from the local Entrypoint Router (Only important for the Detector "avm") (Optional)
+  #URL:  "fritz.box"
   # IPv6 Local (GlobalUnicast) Network Prefix-Length (Optional)
-  IPv6PrefixLength: 56
-  # Network Interface Identifier (Only important for the Detector "generic"!) (Optional)
-  NIC: "eth0" (Linux, Interface Name) / "D3:0E:A1:57:AB:4D" (Windows, Interface MAC-Address)
+  #IPv6PrefixLength: 56
+  # Network Interface (Only important for the Detectors "generic" & "mikrotik") (Optional)
+  #NIC: "eth0" (Linux, Interface Name) / "D3:0E:A1:57:AB:4D" (Windows, Interface MAC-Address)
+  # Different IPv6 Network Interface (Only important for the Detector "mikrotik") (Optional)
+  #IPv6NIC: ""
+  # Detector Login: Username (Only important for the Detector "mikrotik") (Optional)
+  #Username: ""
+  # Detector Login: Password (Only important for the Detector "mikrotik") (Optional)
+  #Password: ""
   # Activate IPv4 Updating [True / False]
   IPv4: True
   # Activate IPv6 Updating [True / False]

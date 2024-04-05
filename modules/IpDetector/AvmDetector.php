@@ -32,7 +32,7 @@ class AvmDetector extends IpDetector
         );
     }
 
-    public function getExternalNetworkIPv4(): IPv4
+    public function getWanIPv4(): IPv4
     {
         $ip = $this->client->GetExternalIPAddress();
 
@@ -41,7 +41,7 @@ class AvmDetector extends IpDetector
             ->build();
     }
 
-    public function getExternalIPv6(): IPv6
+    public function getWanIPv6(): IPv6
     {
         $network = $this->client->X_AVM_DE_GetIPv6Prefix();
         $ip = $this->client->X_AVM_DE_GetExternalIPv6Address();

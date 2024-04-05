@@ -100,6 +100,11 @@ class HttpClient
         $this->setHttpHeader('Authorization', 'Bearer ' . $token);
     }
 
+    public function setHttpBasicAuthentication(string $username, string $password): void
+    {
+        $this->setHttpHeader('Authorization', 'Basic ' . base64_encode($username . ':' . $password));
+    }
+
     /**
      * @throws HttpClientException
      */

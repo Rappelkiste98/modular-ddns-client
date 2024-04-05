@@ -27,7 +27,14 @@ try {
 
     define('USE_IPv4', $config->Detector->IPv4 ?? false);
     define('USE_IPv6', $config->Detector->IPv6 ?? false);
-    define('IP_DETECTOR', ConfigLoader::loadIpDetector($config->Detector->Name, $config->Detector->IPv6PrefixLength ?? null, $config->Detector->URL ?? null, $config->Detector->NIC ?? null));
+    define('IP_DETECTOR', ConfigLoader::loadIpDetector($config->Detector->Name,
+        $config->Detector->IPv6PrefixLength ?? null,
+        $config->Detector->URL ?? null,
+        $config->Detector->NIC ?? null,
+        $config->Detector->IPv6NIC ?? null,
+        $config->Detector->Username ?? null,
+        $config->Detector->Password ?? null)
+    );
     define('MODULES', ConfigLoader::loadDnsServices($config->Modules));
     define('DOMAINS', ConfigLoader::loadDomains($config->Domains));
 
@@ -38,7 +45,7 @@ try {
 
     // If IPv4 is active than Define current Network IPv4 Address
     if (USE_IPv4) {
-        $ipv4 = IP_DETECTOR->getExternalNetworkIPv4();
+        $ipv4 = IP_DETECTOR->getWanIPv4();
         if (!$ipv4->validate()) {
             throw new Exception('Global-Network IPv4 is not valid!');
         }
@@ -49,7 +56,7 @@ try {
 
     // If IPv6 is active than Define current Network IPv6 Address
     if (USE_IPv6) {
-        $ipv6 = IP_DETECTOR->getExternalIPv6();
+        $ipv6 = IP_DETECTOR->getWanIPv6();
         if (!$ipv6->validate()) {
             throw new Exception('Global-Device IPv6 is not valid!');
         }

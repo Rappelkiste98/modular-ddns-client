@@ -16,13 +16,21 @@ abstract class IpDetector
         $this->configPrefixLength = $configPrefixLength;
     }
 
-    public abstract function getExternalNetworkIPv4(): IPv4;
-    public abstract function getExternalIPv6(): IPv6;
+    public abstract function getWanIPv4(): IPv4;
+    public abstract function getWanIPv6(): IPv6;
 
     /**
      * @throws IpNotFoundException
      */
-    public function getDeviceIPv4(): IPv4
+    public function getLanIPv4(): IPv4
+    {
+        throw new IpNotFoundException('Method not implemented in this Detector!');
+    }
+
+    /**
+     * @throws IpNotFoundException
+     */
+    public function getLanIPv6(): IPv6
     {
         throw new IpNotFoundException('Method not implemented in this Detector!');
     }

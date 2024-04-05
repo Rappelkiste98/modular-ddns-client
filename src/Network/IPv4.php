@@ -13,6 +13,26 @@ class IPv4
         return count(explode('.', $ipv4Address));
     }
 
+    public static function ipToBinary(string $ipAddress): string
+    {
+
+    }
+
+    public static function binaryToIp(string $binaryAddress): string
+    {
+
+    }
+
+    public static function trim(string $address): string
+    {
+
+    }
+
+    public static function expand(string $address): string
+    {
+
+    }
+
     public function validate(): bool
     {
         if (filter_var($this->address, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {

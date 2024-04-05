@@ -59,7 +59,7 @@ class ApiDetector extends IpDetector
     /**
      * @throws IpNotFoundException
      */
-    public function getExternalNetworkIPv4(): IPv4
+    public function getWanIPv4(): IPv4
     {
         return $this->fetchIpRemote(self::apisV4);
     }
@@ -67,7 +67,7 @@ class ApiDetector extends IpDetector
     /**
      * @throws IpNotFoundException
      */
-    public function getExternalIPv6(): IPv6
+    public function getWanIPv6(): IPv6
     {
         return $this->fetchIpRemote(self::apisV6);
     }

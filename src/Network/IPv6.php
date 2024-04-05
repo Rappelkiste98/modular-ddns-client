@@ -20,6 +20,60 @@ class IPv6
         return count(explode(':', $ipv6Address));
     }
 
+    public static function ipToBinary(string $ipAddress): string
+    {
+        $splitedAddress = str_split(str_replace(':', '', $ipAddress));
+        $binaryAddress = '';
+
+        // Loop through IPv6 Chars
+        foreach ($splitedAddress as $hexChar) {
+            $binaryChar = base_convert($hexChar, 16, 2);
+            $expandedBinaryChar = str_pad($binaryChar, 4, '0', STR_PAD_LEFT);
+
+            $binaryAddress .= $expandedBinaryChar;
+        }
+
+        return $binaryAddress;
+    }
+
+    public static function binaryToIp(string $binaryAddress): string
+    {
+        $hexAddress = '';
+        foreach (str_split($binaryAddress, 4) as $binaryChar) {
+            $hexAddress .= base_convert($binaryChar, 2, 16);
+        }
+
+        $ipv6Address = '';
+        foreach (str_split($hexAddress, 4) as $segment) {
+            $segment = str_pad($segment, 4, '0');
+            $ipv6Address .= $segment . ':';
+        }
+
+        return rtrim($ipv6Address, ':');
+    }
+
+    public static function trim(string $address): string
+    {
+        $segmented = explode(':', $address);
+        foreach ($segmented as $key => $segment) {
+            $segmented[$key] = ltrim($segment, '0');
+        }
+
+        return implode(':', $segmented);
+    }
+
+    public static function expand(string $address): string
+    {
+        $segmented = explode(':', $address);
+        $expanded = '';
+
+        foreach ($segmented as $segment) {
+            $expanded .= str_pad($segment, 4, '0', STR_PAD_LEFT) . ':';
+        }
+
+        return rtrim($expanded, ':');
+    }
+
     public function validate(): bool
     {
         if (filter_var($this->address, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
@@ -31,7 +85,7 @@ class IPv6
 
     public function setAddress(?string $address): self
     {
-        $this->address = $this->trim($address);
+        $this->address = $address !== null ? $this::trim($address) : null;
         return $this;
     }
 
@@ -58,7 +112,7 @@ class IPv6
 
     public function setNetworkPrefix(?string $networkPrefix): self
     {
-        $this->networkPrefix = $this->trim($networkPrefix);
+        $this->networkPrefix = $networkPrefix !== null ? $this::trim($networkPrefix) : null;
         return $this;
     }
 
@@ -69,7 +123,7 @@ class IPv6
 
     public function setInterfaceIdentifier(?string $interfaceIdentifier): self
     {
-        $this->interfaceIdentifier = $this->trim($interfaceIdentifier);
+        $this->interfaceIdentifier = $interfaceIdentifier !== null ? $this::trim($interfaceIdentifier) : null;
         return $this;
     }
 
@@ -93,19 +147,5 @@ class IPv6
     {
         $this->type = $type;
         return $this;
-    }
-
-    private function trim(?string $address): ?string
-    {
-        if ($address === null) {
-            return null;
-        }
-
-        $segmented = explode(':', $address);
-        foreach ($segmented as $key => $segment) {
-            $segmented[$key] = ltrim($segment, '0');
-        }
-
-        return implode(':', $segmented);
     }
 }
