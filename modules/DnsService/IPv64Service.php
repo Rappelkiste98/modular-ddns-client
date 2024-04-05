@@ -48,7 +48,7 @@ class IPv64Service extends DnsService
             $this->domainZones = $this->fetchGetDomains();
         }
 
-        return $this->domainZones[$domain->getDomainname()] ?? null;
+        return $this->domainZones[$domain->getDomain()] ?? null;
     }
 
     /**
@@ -64,7 +64,7 @@ class IPv64Service extends DnsService
         $zone = $this->getDomainZone($domain);
 
         if ($zone === null) {
-            throw new DnsServiceException('DomainZone "' . $domain->getDomainname() . '" not found! Skip');
+            throw new DnsServiceException('DomainZone "' . $domain->getDomain() . '" not found! Skip');
         }
 
         $record->setLastUpdate(new \DateTime('now'));
@@ -98,9 +98,13 @@ class IPv64Service extends DnsService
                     if ($record->getIp() instanceof IPv4) {
                         $recordIpv4 = $record;
                         $recordIpv6 = $this->findDnsRecordByDomainameAndIpClass($record->getDnsRecordname(), IPv6::class);
+                        $recordIpv6->setUpdate(false);
+                        $recordIpv6->setCreate(false);
                     } else {
                         $recordIpv6 = $record;
                         $recordIpv4 = $this->findDnsRecordByDomainameAndIpClass($record->getDnsRecordname(), IPv4::class);
+                        $recordIpv4->setUpdate(false);
+                        $recordIpv4->setCreate(false);
                     }
 
                     $this->execDDnsUpdate($recordIpv4, $recordIpv6);

@@ -78,7 +78,7 @@ class NetcupService extends DnsService
         $zone = $this->getDomainZone($domain);
 
         if ($zone === null) {
-            throw new DnsServiceException('DomainZone "' . $domain->getDomainname() . '" not found! Skip');
+            throw new DnsServiceException('DomainZone "' . $domain->getDomain() . '" not found! Skip');
         }
 
         $record->setLastUpdate(new \DateTime('now'));
