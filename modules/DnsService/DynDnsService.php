@@ -32,7 +32,7 @@ class DynDnsService extends DnsService
     public function getDomainZone(Domain $domain): ?DomainZone
     {
         if (count($this->domainZones) === 0) {
-            $this->domainZones[] = $this->createDomainZoneByIpDetector($domain);
+            $this->domainZones[$domain->getDomain()] = $this->createDomainZoneByIpDetector($domain);
         }
 
         return $this->domainZones[$domain->getDomain()] ?? null;
