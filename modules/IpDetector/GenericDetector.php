@@ -97,6 +97,7 @@ class GenericDetector extends IpDetector
             throw new IpNotFoundException('No Network-Interface found with NIC: ' . $this->nic);
         }
 
+        $globalUnicasts = [];
         $nicInterface = $nicInterfaces[$this->nic];
         foreach ($nicInterface['unicast'] as $unicast) {
             $address = $unicast['address'] ?? null;
@@ -116,8 +117,20 @@ class GenericDetector extends IpDetector
                     }
                 }
 
-                return $ipv6Builder->build();
+                $globalUnicasts[] = $ipv6Builder->build();
             }
+        }
+
+        if (count($globalUnicasts) > 1) {
+            $currentApiAddress = $this->apiDetector->getExternalIPv6();
+
+            foreach ($globalUnicasts as $globalUnicast) {
+                if ($globalUnicast->getNetworkPrefix() === $currentApiAddress->getNetworkPrefix()) {
+                    return $globalUnicast;
+                }
+            }
+        } else {
+            return current($globalUnicasts);
         }
 
         throw new IpNotFoundException('No Global IPv6 Address found!');
